@@ -1,33 +1,30 @@
-use std::net::{UdpSocket, IpAddr, Ipv4Addr, SocketAddr};
-use std::str::FromStr;
-use Aes256GcmEncryptor::Aes256GcmEncryptor;
-fn main() -> std::io::Result<()> {
-    // Set the multicast address and port to listen on
-    let multicast_addr = "224.1.1.255";
-    let port = 23106;
+mod aes_encryptor;
 
-    // Create a UDP socket bound to the multicast address and port
-    let socket = UdpSocket::bind(SocketAddr::new(IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)), port))?;
-    socket.join_multicast_v4(&Ipv4Addr::from_str(multicast_addr).unwrap(), &Ipv4Addr::new(0, 0, 0, 0))?;
+use std::str;
+use base64::{decode, encode};
+use crate::aes_encryptor::AesEncryptor;
 
+fn main() {
+    // Clé secrète pour l'AES
+    let key_base64 = "z01JW7/j8Acb5PYfrl+P15O/axfLZ1DvJpE+lyxjNtQ=";
 
-    //TEST AES256
-    let key = [0u8; 32];
-    let encryptor = Aes256GcmEncryptor::new(key);
+    // Créer un encrypteur AES
+    let aes_encryptor = AesEncryptor::new(key_base64);
 
-    let plaintext = "Hello, world!";
-    let ciphertext = encryptor.encrypt(plaintext);
-    let decrypted = encryptor.decrypt(&ciphertext);
+    // Message à encrypter
+    let message = "Hello, world!".to_string();
 
-    assert_eq!(decrypted, plaintext);
-    //FI?
+    // Encrypter le message
+    let ciphertext = aes_encryptor.encrypt(message);
 
+    // Afficher le message encrypté en base64
+    let ciphertext_to_string = String::from_utf8_lossy(&ciphertext);
+    println!("Ciphertext : {:?}", ciphertext_to_string);
 
-    // Listen for multicast packets
-    let mut buf = [0; 1024];
-    loop {
-        let (size, src) = socket.recv_from(&mut buf)?;
-        println!("Received {} bytes from {}", size, src);
-        println!("{}", String::from_utf8_lossy(&buf[..size]));
+    // Decrypter le message
+    let decrypted_message = aes_encryptor.decrypt(&ciphertext);
+    match decrypted_message {
+        Ok(msg) => println!("Decrypted message: {}", msg),
+        Err(e) => println!("Error: {}", e),
     }
 }

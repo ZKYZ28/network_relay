@@ -7,3 +7,7 @@ edition = "2021"
 
 [dependencies]
 tokio = { version = "1", features = ["full"] }
+aes-gcm = "0.10.1"
+rand = "0.8"
+base64 = "0.21.0"
+
