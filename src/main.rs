@@ -1,5 +1,5 @@
-mod ServerConfig;
-mod ConfigReader;
+mod server_config;
+mod config_reader;
 mod aes_encryptor;
 
 use std::str;
@@ -19,7 +19,7 @@ fn main() -> std::io::Result<()> {
     socket.join_multicast_v4(&Ipv4Addr::from_str(multicast_addr).unwrap(), &Ipv4Addr::new(0, 0, 0, 0))?;
 
 
-    let config = ConfigReader::read_config("src/ressources/relayConfig.json").unwrap();
+    let config = config_reader::read_config("src/ressources/relayConfig.json").unwrap();
     let test= config.get("g6server1.godswila.guru").unwrap();
 
     println!("{}", test.get_server_name());

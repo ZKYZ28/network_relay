@@ -3,23 +3,23 @@ use serde::Deserialize;
 
 #[derive(Serialize, Deserialize)] //Serialize, Deserialize automatique
 pub struct ServerConfig {
-    serverName: String,
-    base64KeyAES: String,
+    server_name: String,
+    base64key_aes: String,
 }
 
 impl ServerConfig {
-    fn new(serverName: String, base64KeyAES: String) -> Self {
+    fn new(server_name: String, base64key_aes: String) -> Self {
         Self {
-            serverName,
-            base64KeyAES,
+            server_name: server_name,
+            base64key_aes: base64key_aes,
         }
     }
 
     pub fn get_server_name(&self) -> &str {
-        &self.serverName
+        &self.server_name
     }
 
     pub fn get_base64_key_aes(&self) -> &str {
-        &self.base64KeyAES
+        &self.base64key_aes
     }
 }
