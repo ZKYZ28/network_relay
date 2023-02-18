@@ -1,6 +1,7 @@
 mod server_config;
 mod config_reader;
 mod aes_encryptor;
+mod protocol;
 
 use std::str;
 use base64::{decode, encode};
@@ -8,6 +9,7 @@ use crate::aes_encryptor::AesEncryptor;
 
 use std::net::{UdpSocket, IpAddr, Ipv4Addr, SocketAddr};
 use std::str::FromStr;
+use crate::protocol::Protocol;
 
 fn main() -> std::io::Result<()> {
     // Set the multicast address and port to listen on
@@ -46,6 +48,21 @@ fn main() -> std::io::Result<()> {
         Ok(msg) => println!("Decrypted message: {}", msg),
         Err(e) => println!("Error: {}", e),
     }
+
+    //TEST PROTOCOL
+
+    let aes_key = "MzY4NTM4MzY4NTM4MzY4NTM4MzY4NTM4MzY4NTM4MzY=";
+    let protocol = Protocol::new(aes_key);
+
+    // Chiffrement du message
+        let message = "SEND 123 test@domaine.com #tagdata\r\n";
+        let ciphertext = protocol.aes_encryptor.encrypt(message.to_string());
+
+    // Décryptage et traitement du message
+        let plaintext_response = protocol.decrypt_and_process_message(&ciphertext).unwrap();
+        let response_str = String::from_utf8(plaintext_response).unwrap();
+        println!("Réponse du serveur : {}", response_str);
+
 
 
     // Listen for multicast packets
