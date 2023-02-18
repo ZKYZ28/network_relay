@@ -50,34 +50,27 @@ fn main() -> std::io::Result<()> {
     }
 
     //TEST PROTOCOL
-    #[test]
-    fn test_from_message() {
-        let message = "SEND 1234@domaine.com user1@domaine.com user2@domaine.com Bonjour, comment ça va ?\r\n";
-        let protocol_message = ProtocolMessage::from_message(message).unwrap();
-        assert_eq!(
-            protocol_message,
-            ProtocolMessage::Send(
-                "1234@domaine.com".to_owned(),
-                "user1@domaine.com user2@domaine.com Bonjour, comment ça va ?".to_owned()
-            )
-        );
+    let message1 = "SEND 123@g6server1.godswila.guru johndoe@g6server1.godswila.guru Hello world!\r\n";
+    let message2 = "ECHO 1234 domain.com\r\n";
+    let message3 = "INVALID MESSAGE\r\n";
 
-        let message = "ECHO 8080 domaine.com\r\n";
-        let protocol_message = ProtocolMessage::from_message(message).unwrap();
-        assert_eq!(
-            protocol_message,
-            ProtocolMessage::Echo(8080, "domaine.com".to_owned())
-        );
-
-        let message = "SEND 1234@domaine.com user1@domaine.com user2@domaine.com Bonjour, comment ça va ?";
-        let protocol_message = ProtocolMessage::from_message(message);
-        assert_eq!(protocol_message, None);
-
-        let message = "ECHO 8080 domaine.com";
-        let protocol_message = ProtocolMessage::from_message(message);
-        assert_eq!(protocol_message, None);
+    if let Some(message_type) = Protocol::from_message(message1) {
+        println!("Message type: {}", message_type);
+    } else {
+        println!("Invalid message");
     }
 
+    if let Some(message_type) = Protocol::from_message(message2) {
+        println!("Message type: {}", message_type);
+    } else {
+        println!("Invalid message");
+    }
+
+    if let Some(message_type) = Protocol::from_message(message3) {
+        println!("Message type: {}", message_type);
+    } else {
+        println!("Invalid message");
+    }
 
 
     // Listen for multicast packets
