@@ -1,3 +1,6 @@
+mod ServerConfig;
+mod ConfigReader;
+
 use std::net::{UdpSocket, IpAddr, Ipv4Addr, SocketAddr};
 use std::str::FromStr;
 
@@ -9,6 +12,13 @@ fn main() -> std::io::Result<()> {
     // Create a UDP socket bound to the multicast address and port
     let socket = UdpSocket::bind(SocketAddr::new(IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)), port))?;
     socket.join_multicast_v4(&Ipv4Addr::from_str(multicast_addr).unwrap(), &Ipv4Addr::new(0, 0, 0, 0))?;
+
+
+    let config = ConfigReader::read_config("src/ressources/relayConfig.json").unwrap();
+    let test= config.get("g6server1.godswila.guru").unwrap();
+
+    println!("{}", test.get_server_name());
+
 
     // Listen for multicast packets
     let mut buf = [0; 1024];
