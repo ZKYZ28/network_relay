@@ -1,72 +1,42 @@
 use regex::Regex;
-use super::*;
-use aes_gcm::{Aes256Gcm, KeyInit};
-use aes_gcm::aead::{Aead, generic_array::{ArrayLength, GenericArray}};
-use base64::{encode, decode, Engine};
-use crate::aes_encryptor::AesEncryptor;
 
-
-const RX_LETTER: &str = "[a-zA-Z]";
-const RX_DIGIT: &str = "[0-9]";
-const TAG: &str = "#[a-zA-Z0-9]{5,20}";
-const RX_LETTER_DIGIT: &'static str = "[a-zA-Z0-9]";
-const RX_USERNAME: &'static str = "(([a-zA-Z0-9]){5,20})";
-const RX_DOMAIN: &'static str = "(([a-zA-Z0-9]|\\.){5,200})";
-const RX_USER_DOMAIN: &'static str = "({{login:{},domain:{}}})";
-const RX_SEND: &'static str = "SEND (?P<id_domaine>[0-9]{1,5}) {{login:([a-zA-Z0-9]){5,20},domain:([a-zA-Z0-9]|\\.){5,200}}} (?P<tag_domaine>[a-zA-Z0-9]+) (?P<data>.{1,500})\r\n";
-const RX_ECHO: &'static str = "ECHO (?P<port>[0-9]{1,5}) ([a-zA-Z0-9]|\\.){5,200}\r\n";
-
-
-
-pub struct Protocol {
-    send_regex: Regex,
-    echo_regex: Regex,
-    pub(crate) aes_encryptor: AesEncryptor,
-}
+pub struct Protocol {}
 
 impl Protocol {
-    pub fn new(aes_key_base64: &str) -> Protocol {
-        Protocol {
-            send_regex: Regex::new(RX_SEND).unwrap(),
-            echo_regex: Regex::new(RX_ECHO).unwrap(),
-            aes_encryptor: AesEncryptor::new(aes_key_base64),
-        }
-    }
+    const CHIFFRE: &'static str = "[0-9]";
+    const LETTRE: &'static str = "[A-Za-z]";
+    const LETTRE_CHIFFRE: &'static str = "(?P<lettre_chiffre>[A-Za-z0-9])";
+    const CARACTERE_IMPRIMABLE: &'static str = "[\\x20-\\xFF]";
+    const CRLF: &'static str = "\\r\\n";
+    const SYMBOLE: &'static str = "[!-\\/:-@\\[-`{-~]";
+    const ESP: &'static str = "\\x20";
+    const DOMAINE: &'static str = "(?P<domaine>(?P<lettre_chiffre>[A-Za-z0-9]|[.]){5,200})";
+    const PORT: &'static str = "(?P<port>[0-9]{1,5})";
+    const MESSAGE: &'static str = "(?P<message>[\\x20-\\xFF]{1,200})";
+    const MESSAGE_INTERNE: &'static str = "(?P<message_interne>[\\x20-\\xFF]{1,500})";
+    const NOM_UTILISATEUR: &'static str = "(?P<nom_utilisateur>(?P<lettre_chiffre>[A-Za-z0-9]){5,20})";
+    const TAG: &'static str = "#(?P<tag>(?P<lettre_chiffre>[A-Za-z0-9]){5,20})";
+    const NOM_DOMAINE: &'static str = "(?P<nom_domaine>(?P<nom_utilisateur>[A-Za-z0-9]{5,20})@(?P<domaine>(?P<lettre_chiffre>[A-Za-z0-9]|[.]){5,200}))";
+    const TAG_DOMAINE: &'static str = "(?P<tag_domaine>(?P<tag>#[A-Za-z0-9]{5,20})@(?P<domaine>(?P<lettre_chiffre>[A-Za-z0-9]|[.]){5,200}))";
+    const ID_DOMAINE: &'static str = "(?P<id_domaine>[0-9]{1,5}@(?P<domaine>(?P<lettre_chiffre>[A-Za-z0-9]|[.]){5,200}))";
 
-    pub fn decrypt_and_process_message(&self, ciphertext: &[u8]) -> Result<Vec<u8>, String> {
-        let plaintext = match self.aes_encryptor.decrypt(ciphertext) {
-            Ok(p) => p,
-            Err(e) => return Err(format!("Decryption failed: {}", e)),
-        };
+    pub fn from_message(message: &str) -> Option<ProtocolMessage> {
+        let send_regex = Regex::new(&format!("^SEND{}{}{}({}|{}){}{}{}", ESP, ID_DOMAINE, ESP, NOM_DOMAINE, TAG_DOMAINE, ESP, MESSAGE_INTERNE, CRLF)).unwrap();
+        let echo_regex = Regex::new(&format!("^ECHO{}{}{}{}{}", ESP, PORT, ESP, DOMAINE, CRLF)).unwrap();
 
-        let plaintext_str = match String::from_utf8(Vec::from(plaintext)) {
-            Ok(s) => s,
-            Err(_) => return Err("Invalid UTF-8 string".to_owned()),
-        };
 
-        if let Some(captures) = self.send_regex.captures(&plaintext_str) {
-            let id_domaine = captures.name("id_domaine").unwrap().as_str();
-            let login = captures.name("login").unwrap().as_str();
-            let domain = captures.name("domain").unwrap().as_str();
-            let tag_domaine = captures.name("tag_domaine").unwrap().as_str();
-            let data = captures.name("data").unwrap().as_str();
-
-            // Process SEND message
-            let response = format!("Processed SEND message: {}\r\n", data);
-            let encrypted_response = self.aes_encryptor.encrypt(response);
-            Ok(encrypted_response)
-        } else if let Some(captures) = self.echo_regex.captures(&plaintext_str) {
-            let port = captures.name("port").unwrap().as_str();
-            let domain = captures.name("domain").unwrap().as_str();
-
-            // Process ECHO message
-            let response = format!("Processed ECHO message on port {}\r\n", port);
-            let encrypted_response = self.aes_encryptor.encrypt(response);
-            Ok(encrypted_response)
+        if send_regex.is_match(message) {
+            let captures = send_regex.captures(message).unwrap();
+            let id_domaine = captures.name("id_domaine").unwrap().as_str().to_owned();
+            let nom_domaine = captures.name("nom_domaine").or(captures.name("tag_domaine")).unwrap().as_str().to_owned();
+            Some(ProtocolMessage::Send(id_domaine, nom_domaine))
+        } else if echo_regex.is_match(message) {
+            let captures = echo_regex.captures(message).unwrap();
+            let port = captures.name("port").unwrap().as_str().parse().unwrap();
+            let domaine = captures.name("domaine").unwrap().as_str().to_owned();
+            Some(ProtocolMessage::Echo(port, domaine))
         } else {
-            Err("Unrecognized message format".to_owned())
+            None
         }
     }
-
 }
-

@@ -50,18 +50,33 @@ fn main() -> std::io::Result<()> {
     }
 
     //TEST PROTOCOL
+    #[test]
+    fn test_from_message() {
+        let message = "SEND 1234@domaine.com user1@domaine.com user2@domaine.com Bonjour, comment ça va ?\r\n";
+        let protocol_message = ProtocolMessage::from_message(message).unwrap();
+        assert_eq!(
+            protocol_message,
+            ProtocolMessage::Send(
+                "1234@domaine.com".to_owned(),
+                "user1@domaine.com user2@domaine.com Bonjour, comment ça va ?".to_owned()
+            )
+        );
 
-    let aes_key = "MzY4NTM4MzY4NTM4MzY4NTM4MzY4NTM4MzY4NTM4MzY=";
-    let protocol = Protocol::new(aes_key);
+        let message = "ECHO 8080 domaine.com\r\n";
+        let protocol_message = ProtocolMessage::from_message(message).unwrap();
+        assert_eq!(
+            protocol_message,
+            ProtocolMessage::Echo(8080, "domaine.com".to_owned())
+        );
 
-    // Chiffrement du message
-        let message = "SEND 123 test@domaine.com #tagdata\r\n";
-        let ciphertext = protocol.aes_encryptor.encrypt(message.to_string());
+        let message = "SEND 1234@domaine.com user1@domaine.com user2@domaine.com Bonjour, comment ça va ?";
+        let protocol_message = ProtocolMessage::from_message(message);
+        assert_eq!(protocol_message, None);
 
-    // Décryptage et traitement du message
-        let plaintext_response = protocol.decrypt_and_process_message(&ciphertext).unwrap();
-        let response_str = String::from_utf8(plaintext_response).unwrap();
-        println!("Réponse du serveur : {}", response_str);
+        let message = "ECHO 8080 domaine.com";
+        let protocol_message = ProtocolMessage::from_message(message);
+        assert_eq!(protocol_message, None);
+    }
 
 
 
