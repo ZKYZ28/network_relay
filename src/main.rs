@@ -11,14 +11,11 @@ use crate::aes_encryptor::AesEncryptor;
 
 use std::net::{UdpSocket, IpAddr, Ipv4Addr, SocketAddr};
 use std::str::FromStr;
-use tokio::net::TcpSocket;
+use tokio::net::TcpStream;
 use crate::protocol::Protocol;
 use crate::server_config::ServerConfig;
 use crate::server_config_manager::ServerConfigManager;
 
-pub struct Main {
-    my_hashmap: HashMap<String, TcpSocket>,
-}
 
 fn main() -> std::io::Result<()> {
     // Set the multicast address and port to listen on
@@ -29,18 +26,8 @@ fn main() -> std::io::Result<()> {
     let socket = UdpSocket::bind(SocketAddr::new(IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)), port))?;
     socket.join_multicast_v4(&Ipv4Addr::from_str(multicast_addr).unwrap(), &Ipv4Addr::new(0, 0, 0, 0))?;
 
-    let echo = "ECHO 23106 g6server1.godswila.guru\r\n";
-    if let Some(message_type) = Protocol::from_message(echo) {
-        let type_message = message_type.to_lowercase();
-        println!("Type du message essai : {}", type_message)
 
-    } else {
-        println!("EChO MAUVAIS");
-    }
-
-
-
-        println!("{}", "---------------------ECHO encrypté ----------------------");
+    println!("{}", "---------------------ECHO encrypté ----------------------");
 
     // Clé secrète pour l'AES
     let key_base64 = "z01JW7/j8Acb5PYfrl+P15O/axfLZ1DvJpE+lyxjNtQ=";
@@ -50,9 +37,9 @@ fn main() -> std::io::Result<()> {
 
     // lire la configuration du fichier
     let map_server_config = config_reader::read_config("src/ressources/relayConfig.json").unwrap();
-
     // créer une instance de ServerConfigManager
     let mut server_config_manager = ServerConfigManager::new(map_server_config);
+    let mut connected_server: HashMap<String, TcpStream> = HashMap::new();
 
 
 
@@ -93,14 +80,27 @@ fn main() -> std::io::Result<()> {
 
             //Récupération des groupes puis traitement
             if let Ok(groupes) = Protocol::decomposer(&msg, &type_message) {
+
                 if type_message == "echo" {
                     let domaine_groupement = &groupes[1];
+
                     //Vérification de la connexion
                     let domaine_groupement_echo = server_config_manager.get_server_config(domaine_groupement).map(|sc| sc.is_connected()).unwrap_or(false);
+
                     //Si serveur non connecté, vérification server_is_valid
                     if !domaine_groupement_echo {
+
                         //Connecter le serveur au relai si les conditions sont respectées
-                        server_config_manager.server_is_valid(domaine_groupement);
+                        if server_config_manager.server_is_valid(domaine_groupement){
+                            //Ajouter à la map des serveurs connectées ce nom de domaine + le socket avec les inforamtion
+                            let mut rt = tokio::runtime::Runtime::new().unwrap();
+                            let stream = rt.block_on(async {
+                                tokio::net::TcpStream::connect(&src).await
+                            });
+
+                            connected_server.insert(domaine_groupement.to_string(), stream.unwrap());
+
+                        }
                     } else {
                         println!("{}", "Serveur déjà connecté")
                     }
@@ -108,6 +108,7 @@ fn main() -> std::io::Result<()> {
                     //Vérifier le domaine expéditeur
 
                     //Si expéditeur connecté, il faut chiffrer
+
                 }
             } else {
                 println!("La décomposition du message est invalide.");
