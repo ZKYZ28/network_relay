@@ -3,6 +3,7 @@ mod config_reader;
 mod aes_encryptor;
 mod protocol;
 
+use std::collections::HashMap;
 use std::str;
 use base64::{decode, encode};
 use crate::aes_encryptor::AesEncryptor;
@@ -21,10 +22,10 @@ fn main() -> std::io::Result<()> {
     socket.join_multicast_v4(&Ipv4Addr::from_str(multicast_addr).unwrap(), &Ipv4Addr::new(0, 0, 0, 0))?;
 
 
-    let config = config_reader::read_config("src/ressources/relayConfig.json").unwrap();
-    let test= config.get("g6server1.godswila.guru").unwrap();
+    let mapServerConfig = config_reader::read_config("src/ressources/relayConfig.json").unwrap();
+    let serv1= mapServerConfig.get("g6server1.godswila.guru").unwrap();
 
-    println!("{}", test.get_server_name());
+    /*println!("{}", test.get_server_name());
 
     // Clé secrète pour l'AES
     let key_base64 = "z01JW7/j8Acb5PYfrl+P15O/axfLZ1DvJpE+lyxjNtQ=";
@@ -47,30 +48,116 @@ fn main() -> std::io::Result<()> {
     match decrypted_message {
         Ok(msg) => println!("Decrypted message: {}", msg),
         Err(e) => println!("Error: {}", e),
-    }
+    }*/
 
     //TEST PROTOCOL
-    let message1 = "SEND 123@g6server1.godswila.guru johndoe@g6server1.godswila.guru Hello world!\r\n";
-    let message2 = "ECHO 1234 domain.com\r\n";
+    let message1 = "SEND 12345@mondomaine.com francis@domaine1.com #tendance123@domaine2.com Cici est mon message\r\n";
+    let message4 = "SEND 12345@mondomaine.com francis@domaine.com edwin@domaine2.com Cici est mon message\r\n";
+    let message2 = "ECHO 1234 g6server1.godswila.guru\r\n";
     let message3 = "INVALID MESSAGE\r\n";
 
-    if let Some(message_type) = Protocol::from_message(message1) {
+    //TEST SEND
+     if let Some(message_type) = Protocol::from_message(message1) {
+          println!("Message type: {}", message_type);
+
+          let groupes = Protocol::decomposer_send(message1).unwrap();
+
+          let id_domaine = &groupes[0];
+          let nom_utilisateur_emetteur = &groupes[3];
+          let domaine_emetteur = &groupes[4];
+          let nom_domaine_emetteur = groupes[3].to_owned() + "@" + &groupes[4];
+
+          let nom_tag_domaine_receveur = &groupes[5];
+          let nom_tag_receveur = &groupes[8];
+          let domaine_receveur = &groupes[9];
+
+          let message_intenre = &groupes[11];
+
+          println!("id_domaine = {}", id_domaine);
+          println!("nom_utilisateur_emetteur = {}", nom_utilisateur_emetteur);
+          println!("domaine_emetteur = {}", domaine_emetteur);
+          println!("nom_domaine_emetteur = {}", nom_domaine_emetteur);
+
+          println!("nom_tag_domaine_receveur = {}", nom_tag_domaine_receveur);
+          println!("nom_tag_receveur = {}", nom_tag_receveur);
+          println!("domaine_receveur = {}", domaine_receveur);
+
+          println!("message_intenre = {}", message_intenre);
+
+      } else {
+          println!("Invalid message");
+      }
+
+    println!("-----------------------");
+
+    if let Some(message_type) = Protocol::from_message(message4) {
         println!("Message type: {}", message_type);
+
+
+        let groupes = Protocol::decomposer_send(message4).unwrap();
+
+        if groupes.len() < 11{
+            let id_domaine = &groupes[0];
+            let nom_utilisateur_emetteur = &groupes[3];
+            let domaine_emetteur = &groupes[4];
+            let nom_domaine_emetteur = groupes[3].to_owned() + "@" + &groupes[4];
+
+            let nom_tag_domaine_receveur = &groupes[5];
+            let nom_tag_receveur = &groupes[7];
+            let domaine_receveur = &groupes[8];
+
+            let message_intenre = &groupes[9];
+
+            println!("id_domaine = {}", id_domaine);
+            println!("nom_utilisateur_emetteur = {}", nom_utilisateur_emetteur);
+            println!("domaine_emetteur = {}", domaine_emetteur);
+            println!("nom_domaine_emetteur = {}", nom_domaine_emetteur);
+
+            println!("nom_tag_domaine_receveur = {}", nom_tag_domaine_receveur);
+            println!("nom_tag_receveur = {}", nom_tag_receveur);
+            println!("domaine_receveur = {}", domaine_receveur);
+
+            println!("message_intenre = {}", message_intenre);
+        }
     } else {
         println!("Invalid message");
     }
 
-    if let Some(message_type) = Protocol::from_message(message2) {
+    //TEST ECHO
+   /* if let Some(message_type) = Protocol::from_message(message2) {
         println!("Message type: {}", message_type);
-    } else {
-        println!("Invalid message");
-    }
 
-    if let Some(message_type) = Protocol::from_message(message3) {
+        //Récupération des différentes parties de echo
+        let groupes = Protocol::decomposer_echo(message2).unwrap();
+        let port = &groupes[0];
+        let domaine = &groupes[1];
+
+
+        //Vérification du domaine quand on reçoit le echo
+        if mapServerConfig.contains_key(domaine){
+            let server_config = mapServerConfig.get(domaine);
+            let key = server_config.unwrap().get_base64_key_aes();
+
+            if !key.is_empty(){
+                println!("OK");
+            }else {
+                println!("CLE VIDE");
+            }
+
+        }else {
+            println!("PAS DEDANS")
+        }
+
+    } else {
+        println!("Invalid message");
+    }*/
+
+    //TEST ERREUR
+    /*if let Some(message_type) = Protocol::from_message(message3) {
         println!("Message type: {}", message_type);
     } else {
         println!("Invalid message");
-    }
+    }*/
 
 
     // Listen for multicast packets
