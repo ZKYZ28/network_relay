@@ -95,10 +95,12 @@ fn main() -> std::io::Result<()> {
                             //Ajouter à la map des serveurs connectées ce nom de domaine + le socket avec les inforamtion
                             let mut rt = tokio::runtime::Runtime::new().unwrap();
                             let stream = rt.block_on(async {
-                                tokio::net::TcpStream::connect(&src).await
+                                TcpStream::connect(&src).await
+                            }).unwrap_or_else(|err| {
+                                eprintln!("Erreur lors de la connexion au serveur : {}", err);
+                                std::process::exit(1);
                             });
-
-                            connected_server.insert(domaine_groupement.to_string(), stream.unwrap());
+                            connected_server.insert(domaine_groupement.to_string(), stream);
 
                         }
                     } else {
