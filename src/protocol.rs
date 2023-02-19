@@ -35,8 +35,12 @@ impl Protocol {
         }
     }
 
-    pub fn decomposer_echo(string: &str) -> Result<Vec<String>, &'static str> {
-        let regex_str = format!("^ECHO{}{}{}{}{}", Protocol::ESP, Protocol::PORT, Protocol::ESP, Protocol::DOMAINE, Protocol::CRLF);
+    pub fn decomposer(string: &str, typ: &str) -> Result<Vec<String>, &'static str> {
+        let regex_str = match typ {
+            "echo" => format!("^ECHO{}{}{}{}{}", Protocol::ESP, Protocol::PORT, Protocol::ESP, Protocol::DOMAINE, Protocol::CRLF),
+            "send" => format!("^SEND{}{}{}{}{}(({})|({})){}{}{}", Protocol::ESP, Protocol::ID_DOMAINE, Protocol::ESP, Protocol::NOM_DOMAINE, Protocol::ESP,  "([A-Za-z0-9]{5,20})@([A-Za-z0-9.]{5,200})", Protocol::TAG_DOMAINE, Protocol::ESP, Protocol::MESSAGE_INTERNE, Protocol::CRLF),
+            _ => return Err("Type de décomposition non pris en charge"),
+        };
         let re = match Regex::new(&regex_str) {
             Ok(re) => re,
             Err(_) => return Err("Erreur lors de la création de l'expression régulière"),
@@ -57,29 +61,4 @@ impl Protocol {
 
         Ok(groupes)
     }
-
-
-    pub fn decomposer_send(string: &str) -> Result<Vec<String>, &'static str> {
-        let send_regex =  format!("^SEND{}{}{}{}{}(({})|({})){}{}{}", Protocol::ESP, Protocol::ID_DOMAINE, Protocol::ESP, Protocol::NOM_DOMAINE, Protocol::ESP,  "([A-Za-z0-9]{5,20})@([A-Za-z0-9.]{5,200})", Protocol::TAG_DOMAINE, Protocol::ESP, Protocol::MESSAGE_INTERNE, Protocol::CRLF);
-        let re = match Regex::new(&send_regex) {
-            Ok(re) => re,
-            Err(_) => return Err("Erreur lors de la création de l'expression régulière"),
-        };
-
-        let captures = match re.captures(string) {
-            Some(captures) => captures,
-            None => return Err("Aucune capture trouvée"),
-        };
-
-        let mut groupes = vec![];
-
-        for i in 1..captures.len() {
-            if let Some(capture) = captures.get(i) {
-                groupes.push(capture.as_str().to_string());
-            }
-        }
-
-        Ok(groupes)
-    }
-
 }

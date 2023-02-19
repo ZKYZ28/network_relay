@@ -60,7 +60,7 @@ fn main() -> std::io::Result<()> {
      if let Some(message_type) = Protocol::from_message(message1) {
           println!("Message type: {}", message_type);
 
-          let groupes = Protocol::decomposer_send(message1).unwrap();
+          let groupes = Protocol::decomposer(message1, "send").unwrap();
 
           let id_domaine = &groupes[0];
           let nom_utilisateur_emetteur = &groupes[3];
@@ -94,7 +94,7 @@ fn main() -> std::io::Result<()> {
         println!("Message type: {}", message_type);
 
 
-        let groupes = Protocol::decomposer_send(message4).unwrap();
+        let groupes = Protocol::decomposer(message4, "send").unwrap();
 
         if groupes.len() < 11{
             let id_domaine = &groupes[0];
@@ -123,12 +123,14 @@ fn main() -> std::io::Result<()> {
         println!("Invalid message");
     }
 
+    println!("-----------------------");
+
     //TEST ECHO
-   /* if let Some(message_type) = Protocol::from_message(message2) {
+    if let Some(message_type) = Protocol::from_message(message2) {
         println!("Message type: {}", message_type);
 
         //Récupération des différentes parties de echo
-        let groupes = Protocol::decomposer_echo(message2).unwrap();
+        let groupes = Protocol::decomposer(message2, "echo").unwrap();
         let port = &groupes[0];
         let domaine = &groupes[1];
 
@@ -150,7 +152,7 @@ fn main() -> std::io::Result<()> {
 
     } else {
         println!("Invalid message");
-    }*/
+    }
 
     //TEST ERREUR
     /*if let Some(message_type) = Protocol::from_message(message3) {
