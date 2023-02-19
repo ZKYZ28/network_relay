@@ -2,6 +2,7 @@ mod server_config;
 mod config_reader;
 mod aes_encryptor;
 mod protocol;
+mod server_config_manager;
 
 use std::collections::HashMap;
 use std::str;
@@ -23,7 +24,7 @@ fn main() -> std::io::Result<()> {
 
 
     let mapServerConfig = config_reader::read_config("src/ressources/relayConfig.json").unwrap();
-    let serv1= mapServerConfig.get("g6server1.godswila.guru").unwrap();
+    let server_congi_manager = ServerConfigManager(mapServerConfig);
 
     /*println!("{}", test.get_server_name());
 
