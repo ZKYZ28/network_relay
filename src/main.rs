@@ -169,29 +169,31 @@ fn main() -> std::io::Result<()> {
 
     //Uniquement SEND ou ECHO
     if let Some(message_type) = Protocol::from_message(&msg) {
-        let type_message = message_type;
+        let type_message = message_type.to_lowercase();
 
         //Récupération des groupes puis traitement
-        let groupes = Protocol::decomposer(&msg, &type_message);
+        if let Ok(groupes) = Protocol::decomposer(&msg, &type_message) {
+            if type_message == "echo" {
+                let domaine_groupement = &groupes[1];
+                //Vérification de la connexion
+                let domaine_groupement_echo = server_config_manager.get_server_config(domaine_groupement).map(|sc| sc.is_connected()).unwrap_or(false);
+                //Si serveur non connecté, vérification server_is_valid
+                if !domaine_groupement_echo {
+                    //Connecter le serveur au relai si les conditions sont respectées
+                    server_config_manager.server_is_valid(domaine_groupement);
+                }
+            } else if type_message == "send" {
+                //Vérifier le domaine expéditeur
 
-        if type_message == "ECHO" {
-            let domaine_groupement = &groupes[1];
-            //Vérification de la connexion
-            let domaine_groupement_echo = server_config_manager.get_server_config(domaine_groupement).map(|sc| sc.is_connected()).unwrap_or(false);
-           //Si serveur non connecté, vérification server_is_valid
-            if !domaine_groupement_echo {
-                //Connecter le serveur au relai si les conditions sont respectées
-                server_config_manager.server_is_valid(domaine_groupement);
+                //Si expéditeur connecté, il faut chiffrer
             }
-        } else if type_message == "SEND" {
-            //Vérifier le domaine expéditeur
-
-            //Si expéditeur connecté, il faut chiffrer
+        } else {
+            println!("La décomposition du message est invalide.");
         }
-
     } else {
         println!("Le message reçu est invalide.");
     }
+
 
     // Listen for multicast packets
     let mut buf = [0; 1024];
