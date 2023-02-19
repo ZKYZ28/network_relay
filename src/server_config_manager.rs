@@ -28,6 +28,7 @@ impl ServerConfigManager {
                 // mettre à jour le isConnected
                 let server_config = self.my_hashmap.get_mut(domain).unwrap();
                 server_config.set_is_connected(true);
+                println!("{}", "Serveur connecté first");
                 return true;
             }
         }
