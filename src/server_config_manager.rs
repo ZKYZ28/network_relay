@@ -1,25 +1,42 @@
 use std::collections::HashMap;
 use crate::server_config::ServerConfig;
 
-struct ServerConfigManager {
+pub struct ServerConfigManager {
     my_hashmap: HashMap<String, ServerConfig>,
 }
 
-impl MyHashMapClass {
-    fn new(hashmap: HashMap<String, ServerConfig>) -> Self {
+impl ServerConfigManager {
+    pub(crate) fn new(hashmap: HashMap<String, ServerConfig>) -> Self {
         Self { my_hashmap: hashmap }
     }
 
-    fn server_is_valid(key: &str, map: &HashMap<String, server_config>) -> bool {
-        if map.contains_key(key){
-            let server_config = mapServerConfig.get(domaine);
+    /// Vérifie si le domaine spécifié existe dans la hashmap de configurations de serveurs
+    ///
+    /// # Arguments
+    ///
+    /// * `domain` - Le domaine à vérifier
+    ///
+    /// # Returns
+    ///
+    /// * `true` si le domaine est présent dans la hashmap et qu'une clé AES est associée à la configuration correspondante, `false` sinon.
+    pub(crate) fn server_is_valid(&mut self, domain: &str) -> bool {
+        if self.my_hashmap.contains_key(domain) {
+            let server_config = self.my_hashmap.get(domain);
             let key = server_config.unwrap().get_base64_key_aes();
 
-            if !key.is_empty(){
-                // + mettre à jour le isConnected
-                return true
+            if !key.is_empty() {
+                // mettre à jour le isConnected
+                let server_config = self.my_hashmap.get_mut(domain).unwrap();
+                server_config.set_is_connected(true);
+                return true;
             }
         }
-        return false
+       return false
+    }
+
+    ///
+    /// #Returns l'instance de Server Option
+    pub(crate) fn get_server_config(&self, domain: &str) -> Option<&ServerConfig> {
+        self.my_hashmap.get(domain)
     }
 }
