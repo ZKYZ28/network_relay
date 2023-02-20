@@ -11,11 +11,13 @@ use crate::aes_encryptor::AesEncryptor;
 
 use std::net::{UdpSocket, IpAddr, Ipv4Addr, SocketAddr};
 use std::str::FromStr;
+use tokio::io::AsyncWriteExt;
 use tokio::net::TcpStream;
 use crate::protocol::Protocol;
 use crate::server_config::ServerConfig;
 use crate::server_config_manager::ServerConfigManager;
 
+// TODO : POUR LA CLE NE PAS LA METTRE DANS LE CONSTRUCTEUR MAIS LA METTRE DANS LA METHODE !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 fn main() -> std::io::Result<()> {
     // Set the multicast address and port to listen on
@@ -46,7 +48,7 @@ fn main() -> std::io::Result<()> {
     // Listen for multicast packets
     let mut buf = [0; 1024];
     loop {
-        let (size, src) = socket.recv_from(&mut buf)?;
+        let (size, mut src) = socket.recv_from(&mut buf)?;
         println!("Received {} bytes from {}", size, src);
         println!("{}", String::from_utf8_lossy(&buf[..size]));
 
@@ -93,6 +95,9 @@ fn main() -> std::io::Result<()> {
                         //Connecter le serveur au relai si les conditions sont respectées
                         if server_config_manager.server_is_valid(domaine_groupement){
                             //Ajouter à la map des serveurs connectées ce nom de domaine + le socket avec les inforamtion
+                            src.set_port((&groupes[0]).parse().unwrap());
+                            println!("IP + PORT  : {}", src);
+
                             let mut rt = tokio::runtime::Runtime::new().unwrap();
                             let stream = rt.block_on(async {
                                 TcpStream::connect(&src).await
@@ -100,16 +105,36 @@ fn main() -> std::io::Result<()> {
                                 eprintln!("Erreur lors de la connexion au serveur : {}", err);
                                 std::process::exit(1);
                             });
-                            connected_server.insert(domaine_groupement.to_string(), stream);
 
+                            connected_server.insert(domaine_groupement.to_string(), stream);
                         }
                     } else {
                         println!("{}", "Serveur déjà connecté")
                     }
                 } else if type_message == "send" {
-                    //Vérifier le domaine expéditeur
 
-                    //Si expéditeur connecté, il faut chiffrer
+                    let mut server_destinataire;
+                    if groupes.len() < 11 {
+                        //CAS d'une TREND
+                        server_destinataire = &groupes[8];
+                    }else{
+                        //CAS D'UN MSGS
+                        server_destinataire = &groupes[9]
+                    }
+                    //Vérifier le domaine expéditeur
+                    if connected_server.contains_key(server_destinataire){
+                        let key = server_config_manager.get_server_config(server_destinataire).map(|sc| sc.get_base64_key_aes()).unwrap_or("");
+                        let aes_encryptor = AesEncryptor::new(key);
+                        let msg_crypted = aes_encryptor.encrypt(msg);
+
+                        let mut socket = connected_server.get(server_destinataire).unwrap();
+
+                        //TODO : GERER ERREUR D'E/S
+                        socket.try_write(msg_crypted.as_slice())?;
+
+                    }else{
+                        println!("Server destinataire non connecté");
+                    }
 
                 }
             } else {

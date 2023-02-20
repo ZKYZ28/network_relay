@@ -25,7 +25,6 @@ impl Protocol {
         let echo_regex = Regex::new(&format!("^ECHO{}{}{}{}{}", Protocol::ESP, Protocol::PORT, Protocol::ESP, Protocol::DOMAINE, Protocol::CRLF)).ok()?;
         let send_regex = Regex::new(&format!("^SEND{}{}{}{}{}(({})|({})){}{}{}", Protocol::ESP, Protocol::ID_DOMAINE, Protocol::ESP, Protocol::NOM_DOMAINE, Protocol::ESP,  Protocol::NOM_DOMAINE, Protocol::TAG_DOMAINE, Protocol::ESP, Protocol::MESSAGE_INTERNE, Protocol::CRLF)).ok()?;
 
-
         if send_regex.is_match(message){
             Some("SEND".to_owned())
         } else if echo_regex.is_match(message) {
