@@ -3,6 +3,7 @@ mod config_reader;
 mod aes_encryptor;
 mod protocol;
 mod server_config_manager;
+mod server_runnable;
 
 use std::collections::HashMap;
 use std::str;
@@ -16,6 +17,7 @@ use tokio::net::TcpStream;
 use crate::protocol::Protocol;
 use crate::server_config::ServerConfig;
 use crate::server_config_manager::ServerConfigManager;
+use crate::server_runnable::ServerRunnable;
 
 // TODO : POUR LA CLE NE PAS LA METTRE DANS LE CONSTRUCTEUR MAIS LA METTRE DANS LA METHODE !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
@@ -106,7 +108,12 @@ fn main() -> std::io::Result<()> {
                                 std::process::exit(1);
                             });
 
+
                             connected_server.insert(domaine_groupement.to_string(), stream);
+                            let mut server_runnable = ServerRunnable::new(&mut connected_server,  stream.clone());
+                            server_runnable.start();
+                            server_runnable.join();
+
                         }
                     } else {
                         println!("{}", "Serveur déjà connecté")
