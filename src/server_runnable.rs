@@ -1,20 +1,21 @@
 use std::collections::HashMap;
 use std::io::{BufRead, BufReader};
 use std::net::{TcpListener, TcpStream};
+use std::sync::{Arc, Mutex, RwLock};
 use std::thread;
 use crate::aes_encryptor::AesEncryptor;
 use crate::protocol::Protocol;
 use crate::server_config_manager::ServerConfigManager;
 
-pub struct ServerRunnable<'a> {
+pub struct ServerRunnable {
     handle: Option<thread::JoinHandle<()>>,
-    connected_server: &'a mut HashMap<String, TcpStream>,
+    connected_server: Arc<Mutex<HashMap<String, TcpStream>>>,
     current_server: String,
     server_config_manager: ServerConfigManager,
 }
 
-impl<'a> ServerRunnable<'a> {
-    pub(crate) fn new(connected_server: &mut HashMap<String, TcpStream>, current_server: String, server_config_manager: ServerConfigManager) -> ServerRunnable {
+impl ServerRunnable {
+    pub(crate) fn new(connected_server: Arc<Mutex<HashMap<String, TcpStream>>>, current_server: String, server_config_manager: ServerConfigManager) -> ServerRunnable {
         ServerRunnable {
             handle: None,
             connected_server,
@@ -23,23 +24,10 @@ impl<'a> ServerRunnable<'a> {
         }
     }
 
-    pub(crate) fn start(&mut self) {
-        let handle = thread::spawn(move || {
-            // Code exécuté dans le Thread
-            self.handle_client();
-        });
 
-        self.handle = Some(handle);
-    }
-
-    pub(crate) fn join(&mut self) {
-        if let Some(handle) = self.handle.take() {
-            handle.join().unwrap();
-        }
-    }
-
-    fn handle_client(&self)  {
-        let stream = self.connected_server.get(&*self.current_server).unwrap();
+    pub (crate) fn handle_client(&self)  {
+        let my_connected_server = self.connected_server.lock().unwrap();
+        let stream = my_connected_server.get(&*self.current_server).unwrap();
 
         let mut reader = BufReader::new(stream);
 
@@ -47,7 +35,7 @@ impl<'a> ServerRunnable<'a> {
             let mut buffer = String::new();
             match reader.read_line(&mut buffer) {
                 Ok(0) => break, // Connexion fermée
-                Ok(1) => {
+                Ok(_) => {
                     // CAS : la ligne est correctement lue
 
                     let key = self.server_config_manager.get_server_config(&*self.current_server).map(|sc| sc.get_base64_key_aes()).unwrap_or("");
@@ -55,7 +43,7 @@ impl<'a> ServerRunnable<'a> {
                     println!("SEND reçu : {:?}", decrypted_message);
 
 
-                  //  self::analyse_message(decrypted_message)
+                  // self::analyse_message(decrypted_message)
 
                 }
                 Err(e) => {

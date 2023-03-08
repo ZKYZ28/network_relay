@@ -6,13 +6,15 @@ mod server_config_manager;
 mod server_runnable;
 
 use std::collections::HashMap;
-use std::str;
+use std::{str, thread};
 use base64::{decode, encode};
 use crate::aes_encryptor::AesEncryptor;
 
 use std::net::{UdpSocket, IpAddr, Ipv4Addr, SocketAddr};
 use std::str::FromStr;
 use std::net::TcpStream;
+use std::sync::{Arc, Mutex};
+use std::thread::Thread;
 use crate::protocol::Protocol;
 use crate::server_config::ServerConfig;
 use crate::server_config_manager::ServerConfigManager;
@@ -60,7 +62,7 @@ fn main() -> std::io::Result<()> {
     let map_server_config = config_reader::read_config("src/ressources/relayConfig.json").unwrap();
     // créer une instance de ServerConfigManager
     let mut server_config_manager = ServerConfigManager::new(map_server_config);
-    let mut connected_server: HashMap<String, TcpStream> = HashMap::new();
+    let mut connected_server: Arc<Mutex<HashMap<String, TcpStream>>> = Arc::new(Mutex::new(HashMap::new()));
 
 
 
@@ -104,16 +106,16 @@ fn main() -> std::io::Result<()> {
             if let Ok(groupes) = Protocol::decomposer(&msg, &type_message) {
 
                 if type_message == "echo" {
-                    let domaine_groupement = &groupes[1];
+                    let domaine_groupement = (&groupes[1]).clone();
 
                     //Vérification de la connexion
-                    let domaine_groupement_echo = server_config_manager.get_server_config(domaine_groupement).map(|sc| sc.is_connected()).unwrap_or(false);
+                    let domaine_groupement_echo = server_config_manager.get_server_config(&domaine_groupement).map(|sc| sc.is_connected()).unwrap_or(false);
 
                     //Si serveur non connecté, vérification server_is_valid
                     if !domaine_groupement_echo {
 
                         //Connecter le serveur au relai si les conditions sont respectées
-                        if server_config_manager.server_is_valid(domaine_groupement){
+                        if server_config_manager.server_is_valid(&domaine_groupement){
                             //Ajouter à la map des serveurs connectées ce nom de domaine + le socket avec les inforamtion
                             src.set_port((&groupes[0]).parse().unwrap());
                             println!("IP + PORT  : {}", src);
@@ -123,14 +125,16 @@ fn main() -> std::io::Result<()> {
                                 std::process::exit(1);
                             });
 
-                            connected_server.insert(domaine_groupement.to_string(), stream);
+                            connected_server.lock().unwrap().insert(domaine_groupement.to_string(), stream);
 
                             let map_server_config_two = config_reader::read_config("src/ressources/relayConfig.json").unwrap();
                             let mut server_config_manager_two = ServerConfigManager::new(map_server_config_two);
-                            let mut server_runnable = ServerRunnable::new(&mut connected_server,  domaine_groupement.to_string(), server_config_manager_two);
-                            server_runnable.start();
-                            server_runnable.join();
+                            let connected_server_arc = Arc::clone(&connected_server);
 
+                            thread::spawn(move || {
+                                let mut server_runnable = ServerRunnable::new(connected_server_arc,  domaine_groupement.to_string(), server_config_manager_two);
+                                server_runnable.handle_client();
+                            });
                         }
                     } else {
                         println!("{}", "Serveur déjà connecté");
@@ -150,14 +154,14 @@ fn main() -> std::io::Result<()> {
                         server_destinataire = &groupes[9]
                     }
                     //Vérifier le domaine expéditeur
-                    if connected_server.contains_key(server_destinataire){
+                    if connected_server.lock().unwrap().contains_key(server_destinataire){
                         let key = server_config_manager.get_server_config(server_destinataire).map(|sc| sc.get_base64_key_aes()).unwrap_or("");
                        // let aes_encryptor = AesEncryptor::new(key);
                         //let msg_crypted = aes_encryptor.encrypt(msg);
 
                       // println!(" MESSAGE CRYPTE SEND PRET A ENVOYER{:?}",  String::from_utf8_lossy(&msg_crypted));
 
-                        let mut socket = connected_server.get(server_destinataire).unwrap();
+                        let mut socket = connected_server.lock().unwrap().get(server_destinataire).unwrap();
 
                         //TODO : GERER ERREUR D'E/S
                         //
