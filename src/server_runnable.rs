@@ -39,6 +39,7 @@ impl ServerRunnable {
                     // CAS : la ligne est correctement lue
 
                     let key = self.server_config_manager.get_server_config(&*self.current_server).map(|sc| sc.get_base64_key_aes()).unwrap_or("");
+                    println!("SEND reçu CHIFFRE LOULOU : {:?}", buffer.as_bytes());
                     let decrypted_message = AesEncryptor::decrypt(key, buffer.as_bytes());
                     println!("SEND reçu : {:?}", decrypted_message);
 
@@ -51,7 +52,6 @@ impl ServerRunnable {
                     println!("Erreur de lecture");
                     break;
                 }
-                _ => {}
             }
         }
     }

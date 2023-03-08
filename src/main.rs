@@ -42,6 +42,10 @@ fn main() -> std::io::Result<()> {
 
     // Encrypter le message
     let ciphertext = AesEncryptor::encrypt(key_base64, message);
+    //
+    // let decrypt_test = [13, 13, 10];
+    //
+    // println!("ADADAD : {}", String::from_utf8_lossy(&decrypt_test));
 
     // Afficher le message encrypté en base64
     let ciphertext_to_string = String::from_utf8_lossy(&ciphertext);
