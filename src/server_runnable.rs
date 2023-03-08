@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use std::io::BufReader;
+use std::io::{BufRead, BufReader};
 use std::net::TcpListener;
 use std::thread;
 use tokio::net::TcpStream;
@@ -23,7 +23,7 @@ impl<'a> ServerRunnable<'a> {
 
         let handle = thread::spawn(move || {
             // Code exécuté dans le Thread
-            handle_client(self.tcp_stream.clone());
+            Self::handle_client(Self::tcp_stream);
         });
 
         self.handle = Some(handle);
@@ -35,11 +35,12 @@ impl<'a> ServerRunnable<'a> {
         }
     }
 
-    fn handle_client(stream: TcpStream) {
+    fn handle_client(&self) {
+        let stream = stream.into_std().unwrap();
         let mut reader = BufReader::new(stream);
         loop {
             let mut buffer = String::new();
-            match reader.readline(&mut buffer) {
+            match reader.read_line(&mut buffer) {
                 Ok(0) => break, // Connexion fermée
                 Ok(1) => {
                     // Ligne lue avec succès, faire quelque chose avec la ligne
@@ -50,6 +51,7 @@ impl<'a> ServerRunnable<'a> {
                     println!("Erreur de lecture : {}", e);
                     break;
                 }
+                _ => {}
             }
         }
     }
