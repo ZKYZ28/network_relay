@@ -123,12 +123,11 @@ fn main() -> std::io::Result<()> {
                                 std::process::exit(1);
                             });
 
-
-
-
                             connected_server.insert(domaine_groupement.to_string(), stream);
 
-                            let mut server_runnable = ServerRunnable::new(&mut connected_server,  stream.try_clone().unwrap());
+                            let map_server_config_two = config_reader::read_config("src/ressources/relayConfig.json").unwrap();
+                            let mut server_config_manager_two = ServerConfigManager::new(map_server_config_two);
+                            let mut server_runnable = ServerRunnable::new(&mut connected_server,  domaine_groupement.to_string(), server_config_manager_two);
                             server_runnable.start();
                             server_runnable.join();
 
