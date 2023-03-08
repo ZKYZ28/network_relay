@@ -1,8 +1,7 @@
 use std::collections::HashMap;
 use std::io::{BufRead, BufReader};
-use std::net::TcpListener;
+use std::net::{TcpListener, TcpStream};
 use std::thread;
-use tokio::net::TcpStream;
 
 pub struct ServerRunnable<'a> {
     handle: Option<thread::JoinHandle<()>>,
@@ -11,7 +10,7 @@ pub struct ServerRunnable<'a> {
 }
 
 impl<'a> ServerRunnable<'a> {
-    pub(crate) fn new(connected_server: &'a mut HashMap<String, TcpStream>, tcp_stream: TcpStream) -> ServerRunnable<'a> {
+    pub(crate) fn new(connected_server: &mut HashMap<String, TcpStream>, tcp_stream: TcpStream) -> ServerRunnable {
         ServerRunnable {
             handle: None,
             connected_server,
@@ -20,10 +19,11 @@ impl<'a> ServerRunnable<'a> {
     }
 
     pub(crate) fn start(&mut self) {
-
+        let tcp_stream = self.tcp_stream.try_clone().unwrap(); // Cloner la TcpStream pour la passer au Thread
+        // Cloner la TcpStream pour la passer au Thread
         let handle = thread::spawn(move || {
             // Code exécuté dans le Thread
-            Self::handle_client(Self::tcp_stream);
+            Self::handle_client(tcp_stream);
         });
 
         self.handle = Some(handle);
@@ -35,8 +35,8 @@ impl<'a> ServerRunnable<'a> {
         }
     }
 
-    fn handle_client(&self) {
-        let stream = stream.into_std().unwrap();
+    fn handle_client(tcp_stream: TcpStream) {
+        let stream = tcp_stream.try_clone().unwrap();
         let mut reader = BufReader::new(stream);
         loop {
             let mut buffer = String::new();

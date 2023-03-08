@@ -12,8 +12,7 @@ use crate::aes_encryptor::AesEncryptor;
 
 use std::net::{UdpSocket, IpAddr, Ipv4Addr, SocketAddr};
 use std::str::FromStr;
-use tokio::io::AsyncWriteExt;
-use tokio::net::TcpStream;
+use std::net::TcpStream;
 use crate::protocol::Protocol;
 use crate::server_config::ServerConfig;
 use crate::server_config_manager::ServerConfigManager;
@@ -100,17 +99,15 @@ fn main() -> std::io::Result<()> {
                             src.set_port((&groupes[0]).parse().unwrap());
                             println!("IP + PORT  : {}", src);
 
-                            let mut rt = tokio::runtime::Runtime::new().unwrap();
-                            let stream = rt.block_on(async {
-                                TcpStream::connect(&src).await
-                            }).unwrap_or_else(|err| {
+                            let stream = TcpStream::connect(&src).unwrap_or_else(|err| {
                                 eprintln!("Erreur lors de la connexion au serveur : {}", err);
                                 std::process::exit(1);
                             });
 
 
+
                             connected_server.insert(domaine_groupement.to_string(), stream);
-                            let mut server_runnable = ServerRunnable::new(&mut connected_server,  stream.clone());
+                            let mut server_runnable = ServerRunnable::new(&mut connected_server,  stream.try_clone().unwrap());
                             server_runnable.start();
                             server_runnable.join();
 
@@ -137,7 +134,7 @@ fn main() -> std::io::Result<()> {
                         let mut socket = connected_server.get(server_destinataire).unwrap();
 
                         //TODO : GERER ERREUR D'E/S
-                        socket.try_write(msg_crypted.as_slice())?;
+                        //socket.try_write(msg_crypted.as_slice())?;
 
                     }else{
                         println!("Server destinataire non connecté");
