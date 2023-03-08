@@ -34,8 +34,26 @@ fn main() -> std::io::Result<()> {
     // Clé secrète pour l'AES
     let key_base64 = "z01JW7/j8Acb5PYfrl+P15O/axfLZ1DvJpE+lyxjNtQ=";
 
+    // Message à encrypter
+    let message = "Hello, world!".to_string();
+
+    // Encrypter le message
+    let ciphertext = AesEncryptor::encrypt(key_base64, message);
+
+    // Afficher le message encrypté en base64
+    let ciphertext_to_string = String::from_utf8_lossy(&ciphertext);
+    println!("Ciphertext : {:?}", ciphertext_to_string);
+
+
+// Decrypter le message
+    match AesEncryptor::decrypt(key_base64, &ciphertext) {
+        Ok(msg) => println!("Decrypted message: {}", msg),
+        Err(e) => println!("Error: {}", e),
+    }
+
+
     // Créer un encrypteur AES
-    let aes_encryptor = AesEncryptor::new(key_base64);
+   // let aes_encryptor = AesEncryptor::new(key_base64);
 
     // lire la configuration du fichier
     let map_server_config = config_reader::read_config("src/ressources/relayConfig.json").unwrap();
@@ -55,14 +73,15 @@ fn main() -> std::io::Result<()> {
         let message_to_encrypt = String::from_utf8_lossy(&buf[..size]).to_string();
 
         // Encrypter le message
-        let ciphertext = aes_encryptor.encrypt(message_to_encrypt);
+        let ciphertext = AesEncryptor::encrypt(key_base64, message_to_encrypt);
 
         // Afficher le message encrypté en base64
         let ciphertext_to_string = String::from_utf8_lossy(&ciphertext);
         println!("Ciphertext : {:?}", ciphertext_to_string);
 
+
         // Decrypter le message
-        let decrypted_message = aes_encryptor.decrypt(&ciphertext);
+        let decrypted_message = AesEncryptor::decrypt(key_base64, &ciphertext);
         //Si le chiffrement s'est bien déroule, le message déchiffré est stocké dans msg si tout se passe bien
         // sinon message par défaut //TODO peut être mettre chaine vide afin de déterminer si ça passe dans from_message ou non
         println!("Decyphertext : {:?}", decrypted_message);
@@ -106,31 +125,42 @@ fn main() -> std::io::Result<()> {
                                 std::process::exit(1);
                             });
 
+
                             connected_server.insert(domaine_groupement.to_string(), stream);
+
                         }
                     } else {
-                        println!("{}", "Serveur déjà connecté")
+                        println!("{}", "Serveur déjà connecté");
                     }
                 } else if type_message == "send" {
+
+                    println!("{}", "SEND TYPE");
 
                     let mut server_destinataire;
                     if groupes.len() < 11 {
                         //CAS d'une TREND
+                        println!("{}", "TREND ENVOYE SEND");
                         server_destinataire = &groupes[8];
                     }else{
                         //CAS D'UN MSGS
+                        println!("{}", "TREND ENVOYE MSGS");
                         server_destinataire = &groupes[9]
                     }
                     //Vérifier le domaine expéditeur
                     if connected_server.contains_key(server_destinataire){
                         let key = server_config_manager.get_server_config(server_destinataire).map(|sc| sc.get_base64_key_aes()).unwrap_or("");
-                        let aes_encryptor = AesEncryptor::new(key);
-                        let msg_crypted = aes_encryptor.encrypt(msg);
+                       // let aes_encryptor = AesEncryptor::new(key);
+                        //let msg_crypted = aes_encryptor.encrypt(msg);
+
+                      // println!(" MESSAGE CRYPTE SEND PRET A ENVOYER{:?}",  String::from_utf8_lossy(&msg_crypted));
 
                         let mut socket = connected_server.get(server_destinataire).unwrap();
 
                         //TODO : GERER ERREUR D'E/S
-                        socket.try_write(msg_crypted.as_slice())?;
+                        //
+                        println!(" ECRIT AVANT SOCKET");
+                       // socket.try_write(msg_crypted.as_slice())?;
+                        println!(" ECRIT APRES SOCKET");
 
                     }else{
                         println!("Server destinataire non connecté");
