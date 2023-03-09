@@ -8,7 +8,6 @@ use crate::protocol::Protocol;
 use base64;
 
 pub struct ServerRunnable {
-    handle: Option<thread::JoinHandle<()>>,
     servers_map: Arc<Mutex<HashMap<String, TcpStream>>>,
     domain: String,
     aes_key: String,
@@ -21,7 +20,6 @@ impl ServerRunnable {
         aes_key: String,
     ) -> ServerRunnable {
         ServerRunnable {
-            handle: None,
             servers_map,
             domain,
             aes_key,
@@ -58,7 +56,6 @@ impl ServerRunnable {
             println!("Socket introuvable pour le nom de domaine {}", self.domain);
         }
     }
-
 
 
     fn analyse_message(&self, msg: String) {
