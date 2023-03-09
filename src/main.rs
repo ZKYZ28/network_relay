@@ -18,7 +18,7 @@ static MULTICAST_IP: &str = "224.1.1.255";
 fn main() {
 
     //Création des map
-    let server_map: Arc<Mutex<HashMap<String, TcpStream>>> = Arc::new(Mutex::new(HashMap::new()));
+    let server_map = Arc::new(Mutex::new(HashMap::new()));
     let server_aes_map = config_reader::read_config("src/ressources/relayConfig.json").unwrap();
 
 
@@ -30,7 +30,6 @@ fn main() {
  * Méthode qui écoute en boucle pour les echo et qui ajoute dans servermap quand une connection est éffectuée
  */
 fn receive_multicast(server_map: Arc<Mutex<HashMap<String, TcpStream>>>, aes_map: HashMap<String, String>) -> Result<(), std::io::Error> {
-
     let socket = UdpSocket::bind(SocketAddr::new(IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)), PORT))?;    //Création d'un socket UDP et le lie à toutes les interfaces locales en écoutant le port spécifié
     socket.join_multicast_v4(&Ipv4Addr::from_str(MULTICAST_IP).unwrap(), &Ipv4Addr::new(0, 0, 0, 0))?;  //Permet de joindre un groupe de diffusion multicast IPv4 en utilisant l'adresse IP multicast spécifiée (stockée dans la variable MULTICAST_IP) et en écoutant sur toutes les interfaces locales.
 
@@ -41,7 +40,7 @@ fn receive_multicast(server_map: Arc<Mutex<HashMap<String, TcpStream>>>, aes_map
 
         let echo_message = String::from_utf8_lossy(&buf[..size]);                     //Convertit le tableau de byte en String
 
-        if let Some(map) = Protocol::get_echo_map(&echo_message) {      //Via la méthode get_echo_map de Protocol, recupère les info du echo
+        if let Some(map) = Protocol::get_echo_map(&echo_message) {       //Via la méthode get_echo_map de Protocol, recupère les info du echo
             let domain = map.get("domain").unwrap().to_string();                        //Domain annoncé dans le echo
             let port = map.get("port").unwrap();                                       //Port annoncé dans le echo
 
@@ -50,7 +49,7 @@ fn receive_multicast(server_map: Arc<Mutex<HashMap<String, TcpStream>>>, aes_map
             if aes_map.contains_key(&domain) {                                                            //Vérification que le serveur partage bien une clé AES
                 let unicast_socket = TcpStream::connect(format!("{}:{}", domain, port))?;     //Création d'un socket TCP avec les infos du ECHO
                 server_map.lock().unwrap().insert(domain.clone(), unicast_socket);                     //Ajout du socket dans la map de serveur connecté
-                println!("Connection établie avec le serveur {}.", domain.clone());
+                println!("Connection établie avec le serveur {}.\nNombre de serveurs connectés : {}", domain.clone(), server_map.lock().unwrap().len());
 
                 let aes_key = aes_map.get(&domain).unwrap().to_string();                           //Récupération de la clé AES stockée
 

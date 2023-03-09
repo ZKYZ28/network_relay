@@ -59,7 +59,7 @@ impl Protocol {
 
         let destination_domain = captures.name("dest_domain").unwrap().as_str().to_owned();
 
-        print!("Domaine de destination : {}", destination_domain);
+        println!("Domaine de destination : {}", destination_domain);
 
         Some(destination_domain)
     }

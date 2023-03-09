@@ -29,26 +29,26 @@ impl ServerRunnable {
     }
 
     pub(crate) fn handle_client(&self) {
-        let binding = self.servers_map.clone();
-        let binding = binding.lock().unwrap();
-        let stream = binding.get(&self.domain);
+        let arc = self.servers_map.clone();
+        let stream = {
+            let binding = arc.try_lock().unwrap();
+            binding.get(&self.domain).map(|tcp_stream| tcp_stream.try_clone().unwrap())
+        };
 
         if let Some(stream) = stream {
-            let mut reader = BufReader::new(stream);    //Création de l'input stream du socket pour écouté les messages entrants
-
+            let mut reader = BufReader::new(stream);
             loop {
-                let mut buffer = String::new();                       //Déclaration/Initialisation de la variable repésentant la ligne entrante
-                match reader.read_line(&mut buffer) {                   //Lecture du premier message reçu
-                    Ok(0) => break,     // Buffer vide
-                    Ok(_) => {          // Pas de problème
+                let mut buffer = String::new();
 
-                        let decrypted_message = AesEncryptor::decrypt(&self.aes_key, &base64::decode(&buffer.trim_end()).unwrap()).unwrap(); //TODO decrypt() ne marche pas
+                match reader.read_line(&mut buffer) {
+                    Ok(0) => break,
+                    Ok(_) => {
+                        let decrypted_message = AesEncryptor::decrypt(&self.aes_key, &base64::decode(&buffer.trim_end()).unwrap()).unwrap();
                         println!("Décrypté : {:?}", decrypted_message);
 
                         self.analyse_message(decrypted_message)
                     }
                     Err(_) => {
-                        // Erreur de lecture
                         println!("Erreur de lecture");
                         break;
                     }
@@ -59,14 +59,20 @@ impl ServerRunnable {
         }
     }
 
+
+
     fn analyse_message(&self, msg: String) {
         let dest_domain = Protocol::get_receiving_domain(&msg).unwrap();
 
-        if self.servers_map.lock().unwrap().contains_key(&dest_domain) {
-            self.send_message(&dest_domain, msg);
-            println!("Message transféré au serveur {}.", dest_domain)
+        if let Some(lock_guard) = self.servers_map.try_lock().ok() {
+            if lock_guard.contains_key(&dest_domain) {
+                self.send_message(&dest_domain, msg);
+            } else {
+                println!("Message perdu car le serveur {} n'était pas en ligne ou n'existe pas.", dest_domain);
+            }
+            drop(lock_guard); // Release the lock
         } else {
-            println!("Message perdu car le serveur {} n'était pas en ligne ou n'existe pas.", dest_domain)
+            println!("Failed to acquire lock on servers_map.");
         }
     }
 
@@ -74,8 +80,16 @@ impl ServerRunnable {
      * Méthode qui sert à envoyé un message à un des serveurs connecté.
      */
     fn send_message(&self, domain: &str, msg: String) {
-        let encrypted_msg = AesEncryptor::encrypt(&self.aes_key, msg);                          //Encryption du message
-        let mut tcp_socket = self.servers_map.lock().unwrap().get(domain).unwrap().try_clone().unwrap();     //Récupération du socket du serveur destinataire
-        tcp_socket.write_all(&encrypted_msg).unwrap();                                                               //Envoi
+        let encrypted_msg = AesEncryptor::encrypt(&self.aes_key, msg);
+        let mut tcp_socket = match self.servers_map.try_lock() {
+            Ok(lock_guard) => lock_guard.get(domain).unwrap().try_clone().unwrap(),
+            Err(_) => {
+                println!("Failed to acquire lock on servers_map.");
+                return;
+            }
+        };
+        tcp_socket.write_all(&encrypted_msg).unwrap();
+        println!("Message transféré au serveur {}.", domain);
+        drop(tcp_socket); // Release the lock
     }
 }
