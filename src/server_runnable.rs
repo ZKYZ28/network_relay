@@ -1,10 +1,10 @@
-use crate::aes_encryptor::AesEncryptor;
-use crate::protocol::Protocol;
 use std::collections::HashMap;
 use std::io::{BufRead, BufReader, Write};
-use std::net::TcpStream;
+use std::net::{TcpStream};
 use std::sync::{Arc, Mutex};
 use std::thread;
+use crate::aes_encryptor::AesEncryptor;
+use crate::protocol::Protocol;
 
 pub struct ServerRunnable {
     handle: Option<thread::JoinHandle<()>>,
@@ -33,22 +33,22 @@ impl ServerRunnable {
         let stream = binding.get(&self.domain);
 
         if let Some(stream) = stream {
-            let mut reader = BufReader::new(stream); //Création de l'input stream du socket pour écouté les messages entrants
+            let mut reader = BufReader::new(stream);    //Création de l'input stream du socket pour écouté les messages entrants
 
             loop {
-                let mut buffer = String::new(); //Déclaration/Initialisation de la variable repésentant la ligne entrante
-                match reader.read_line(&mut buffer) {
-                    //Lecture du premier message reçu
-                    Ok(0) => break, // Buffer vide
-                    Ok(_) => {
-                        // Pas de problème
+                let mut buffer = String::new();                       //Déclaration/Initialisation de la variable repésentant la ligne entrante
+                match reader.read_line(&mut buffer) {                   //Lecture du premier message reçu
+                    Ok(0) => break,     // Buffer vide
+                    Ok(_) => {          // Pas de problème
 
-                        println!(
-                            "Ligne récu du serveur {:?} : {:?}",
-                            self.domain,
-                            buffer.trim_end()
-                        );
-                        let decrypted_message = AesEncryptor::decrypt(buffer.trim_end().as_bytes(), &self.aes_key); //TODO decrypt() ne marche pas
+                        println!("Ligne récu du serveur {} : {}, {}", self.domain, buffer, buffer.trim_end().len());
+                        println!("Ligne AsByte {} : {:?}", self.domain, &base64::decode(&buffer.trim_end()).unwrap());
+
+
+
+
+                        use base64;
+                        let decrypted_message = AesEncryptor::decrypt(&self.aes_key, &base64::decode(&buffer.trim_end()).unwrap()); //TODO decrypt() ne marche pas
                         println!("Décrypté : {:?}", decrypted_message);
 
                         //self::analyse_message(decrypted_message)
@@ -73,15 +73,8 @@ impl ServerRunnable {
      * Méthode qui sert à envoyé un message à un des serveurs connecté.
      */
     fn send_message(&self, domain: &str, msg: String) {
-        let encrypted_msg = AesEncryptor::encrypt(&self.aes_key, msg); //Encryption du message
-        let mut tcp_socket = self
-            .servers_map
-            .lock()
-            .unwrap()
-            .get(domain)
-            .unwrap()
-            .try_clone()
-            .unwrap(); //Récupération du socket du serveur destinataire
-        tcp_socket.write_all(&encrypted_msg).unwrap(); //Envoi
+        let encrypted_msg = AesEncryptor::encrypt(&self.aes_key, msg);                          //Encryption du message
+        let mut tcp_socket = self.servers_map.lock().unwrap().get(domain).unwrap().try_clone().unwrap();     //Récupération du socket du serveur destinataire
+        tcp_socket.write_all(&encrypted_msg).unwrap();                                                               //Envoi
     }
 }

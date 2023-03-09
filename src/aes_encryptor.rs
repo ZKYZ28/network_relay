@@ -64,7 +64,7 @@ impl AesEncryptor {
 
      */
 
-    pub fn decrypt(key_base64: &str, ciphertext: &[u8]) -> Result<String, String> {
+    pub fn decrypt(key_base64: &str, ciphertext: &Vec<u8>) -> Result<String, String> {
 
 
         let key_decoded = general_purpose::STANDARD.decode(key_base64).unwrap();
