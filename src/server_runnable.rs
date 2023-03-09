@@ -57,35 +57,7 @@ impl ServerRunnable {
     }
 
     fn analyse_message(msg: Result<String, String>) {
-        //reçois le msg
-        //Fais le traitement
 
-
-        //unwrap pour convertir la result en string
-        /*Ok(groupes) = Protocol::decomposer(&msg.unwrap(), "send");
-        let mut server_destinataire;
-        if groupes.len() < 11 {
-            //CAS d'une TREND
-            server_destinataire = &groupes[8];
-        }else{
-            //CAS D'UN MSGS
-            server_destinataire = &groupes[9]
-        }*/
-
-        //Vérifier le domaine expéditeur
-       /* if connected_server.contains_key(server_destinataire){
-            let key = server_config_manager.get_server_config(server_destinataire).map(|sc| sc.get_base64_key_aes()).unwrap_or("");
-            let aes_encryptor = AesEncryptor::new(key);
-
-            //unwrap pour convertir la result en string
-            let msg_crypted = aes_encryptor.encrypt(msg.unwrap());
-
-            let mut socket = connected_server.get(server_destinataire).unwrap();
-
-
-            socket.try_write(msg_crypted.as_slice())?;*/
-
-        //A la fin utilise la méthode send_message en donnant le message et le stream à utiliser pour l'envoie
     }
 
     fn send_message(msg: Result<String, String>, stream : TcpStream) {

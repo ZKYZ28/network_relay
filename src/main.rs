@@ -23,10 +23,13 @@ use crate::server_runnable::ServerRunnable;
 // TODO : POUR LA CLE NE PAS LA METTRE DANS LE CONSTRUCTEUR MAIS LA METTRE DANS LA METHODE !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 fn main() {
-    
     receive_multicast().expect("Une erreur est surevnue lors de l'écoute en multicast.");
 
-     fn receive_multicast() -> Result<(), std::io::Error> {
+    fn receive_multicast() -> Result<(), std::io::Error> {
+
+        //Map of connected servers
+        let server_map: Arc<Mutex<HashMap<String, TcpStream>>> = Arc::new(Mutex::new(HashMap::new()));
+
         // Specify the multicast group address and port.
         let port = 23106;
 
@@ -51,10 +54,10 @@ fn main() {
 
                 println!("ECHO reçu du serveurr {} sur le port {}.", domain, port);
 
-                let mut unicastSocket = TcpStream::connect(domain.to_owned()+":"+"port")?;
-            }
+                let mut unicast_socket = TcpStream::connect(format!("{}:{}", domain, port))?;
+                server_map.lock().unwrap().insert(domain.clone(), unicast_socket);
 
-            //let mut unicastSocket = TcpStream::connect("127.0.0.1:34254")?;
+            }
             // Print the received message.
             println!("Received message: {}", echo_essage);
         }
