@@ -11,7 +11,7 @@ impl Protocol {
 
     const NOM_DOMAINE: &'static str = "([A-Za-z0-9]{5,20})@([A-Za-z0-9.]{5,200})";
     const ID_DOMAINE: &'static str = "([0-9]{1,5})@([A-Za-z0-9.]{5,200})";
-    const DEST_DOMAINE: &'static str = "([A-Za-z0-9]{5,20})@(?P<dest_domain>[A-Za-z0-9.]{5,200})";
+    const DEST_DOMAINE: &'static str = "#?([A-Za-z0-9]{5,20})@(?P<dest_domain>[A-Za-z0-9.]{5,200})";
     const MESSAGE_INTERNE: &'static str = "(?P<message_interne>[\\x20-\\xFF]{1,500})";
 
     pub fn get_echo_map(msg: &str) -> Option<HashMap<String, String>> {
