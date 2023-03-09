@@ -21,10 +21,15 @@ fn main() {
     //TEST
     use base64;
     let key_base64 = "DHADoCxPItcFyKwxcTEuGg5neBd2K+VLXWc6zCnsBq4=";
-    let message = "Hello, world!".to_string();
+    let message = "SEND 2@g6server1.godswila.guru antho@g6server1.godswila.guru femme@femme FOLLOW femme@femme".to_string();
     let ciphertext = AesEncryptor::encrypt(key_base64, message);
     let ciphertext_base64 = base64::encode(&ciphertext);
-    println!("Ciphertext (Base64): {}", ciphertext_base64);
+
+
+
+    println!("Ciphertext asbyte: {:?}", ciphertext);
+    println!("Ciphertext (Base64): {}, {}", ciphertext_base64, ciphertext_base64.len());
+
 
     match AesEncryptor::decrypt(key_base64, &ciphertext) {
         Ok(msg) => println!("Decrypted message: {}", msg),

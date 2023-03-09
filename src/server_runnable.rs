@@ -38,8 +38,14 @@ impl ServerRunnable {
                     Ok(0) => break,     // Buffer vide
                     Ok(_) => {          // Pas de problème
 
-                        println!("Ligne récu du serveur {:?} : {:?}", self.domain, buffer.trim_end());
-                        let decrypted_message = AesEncryptor::decrypt(&self.aes_key, buffer.trim_end().as_bytes()); //TODO decrypt() ne marche pas
+                        println!("Ligne récu du serveur {} : {}, {}", self.domain, buffer, buffer.trim_end().len());
+                        println!("Ligne AsByte {} : {:?}", self.domain, &base64::decode(&buffer.trim_end()).unwrap());
+
+
+
+
+                        use base64;
+                        let decrypted_message = AesEncryptor::decrypt(&self.aes_key, &base64::decode(&buffer.trim_end()).unwrap()); //TODO decrypt() ne marche pas
                         println!("Décrypté : {:?}", decrypted_message);
 
                         //self::analyse_message(decrypted_message)
