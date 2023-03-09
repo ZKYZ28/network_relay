@@ -43,10 +43,10 @@ impl AesEncryptor {
         // Extract the first 12 bytes of the ciphertext and convert them into a generic array.
         // Extract the first 12 bytes of the concatenated ciphertext array as the IV and the remaining bytes as the ciphertext.
         let iv = GenericArray::from_slice(&ciphertext[..12]);
-        println!("{:?}", iv);
+        println!("iv : {:?}", iv);
         let ciphertext = &ciphertext[0..];
 
-        println!("{:?}", ciphertext);
+        println!("ciphertext : {:?}", ciphertext);
 
         // Decrypt the ciphertext using the AES-256-GCM cipher and the IV.
         match cipher.decrypt(iv, ciphertext) { // dereference ciphertext with *
