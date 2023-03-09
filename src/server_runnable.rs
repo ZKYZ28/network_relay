@@ -5,6 +5,7 @@ use std::sync::{Arc, Mutex};
 use std::thread;
 use crate::aes_encryptor::AesEncryptor;
 use crate::protocol::Protocol;
+use base64;
 
 pub struct ServerRunnable {
     handle: Option<thread::JoinHandle<()>>,
@@ -41,17 +42,10 @@ impl ServerRunnable {
                     Ok(0) => break,     // Buffer vide
                     Ok(_) => {          // Pas de problème
 
-                        println!("Ligne récu du serveur {} : {}, {}", self.domain, buffer, buffer.trim_end().len());
-                        println!("Ligne AsByte {} : {:?}", self.domain, &base64::decode(&buffer.trim_end()).unwrap());
-
-
-
-
-                        use base64;
-                        let decrypted_message = AesEncryptor::decrypt(&self.aes_key, &base64::decode(&buffer.trim_end()).unwrap()); //TODO decrypt() ne marche pas
+                        let decrypted_message = AesEncryptor::decrypt(&self.aes_key, &base64::decode(&buffer.trim_end()).unwrap()).unwrap(); //TODO decrypt() ne marche pas
                         println!("Décrypté : {:?}", decrypted_message);
 
-                        //self::analyse_message(decrypted_message)
+                        self.analyse_message(decrypted_message)
                     }
                     Err(_) => {
                         // Erreur de lecture
@@ -65,8 +59,15 @@ impl ServerRunnable {
         }
     }
 
-    fn analyse_message(msg: Result<String, String>) {
-        //let send_map = Protocol::get_send_map(&msg.unwrap());
+    fn analyse_message(&self, msg: String) {
+        let dest_domain = Protocol::get_receiving_domain(&msg).unwrap();
+
+        if self.servers_map.lock().unwrap().contains_key(&dest_domain) {
+            self.send_message(&dest_domain, msg);
+            println!("Message transféré au serveur {}.", dest_domain)
+        } else {
+            println!("Message perdu car le serveur {} n'était pas en ligne ou n'existe pas.", dest_domain)
+        }
     }
 
     /**
