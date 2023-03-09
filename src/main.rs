@@ -24,7 +24,7 @@ use crate::server_runnable::ServerRunnable;
 
 fn main() {
     
-    receive_multicast().expect("TODO: panic message");
+    receive_multicast().expect("Une erreur est surevnue lors de l'écoute en multicast.");
 
      fn receive_multicast() -> Result<(), std::io::Error> {
         // Specify the multicast group address and port.
@@ -45,14 +45,13 @@ fn main() {
             // Convert the received bytes into a string.
             let echo_essage = String::from_utf8_lossy(&buf[..size]);
 
-
             if let Some(map) = Protocol::get_echo_map(&echo_essage) {
-                let domain = map.get("ip").unwrap();
+                let domain = map.get("domain").unwrap();
+                let port = map.get("port").unwrap();
 
-                println!("{}", domain);
-                println!("{}", "+-+");
+                println!("ECHO reçu du serveurr {} sur le port {}.", domain, port);
 
-                //let mut unicastSocket = TcpStream::connect("127.0.0.1:34254")?;
+                let mut unicastSocket = TcpStream::connect(domain.to_owned()+":"+"port")?;
             }
 
             //let mut unicastSocket = TcpStream::connect("127.0.0.1:34254")?;

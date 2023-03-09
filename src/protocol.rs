@@ -11,8 +11,8 @@ impl Protocol {
     const CRLF: &'static str = "\\r\\n";
     const SYMBOLE: &'static str = "[!-\\/:-@\\[-`{-~]";
     const ESP: &'static str = "\\x20";
-    const DOMAINE: &'static str = "[A-Za-z0-9]+([-\\.][A-Za-z0-9]+)*";
-    const PORT: &'static str = "(?[0-9]{1,5})";
+    const DOMAINE: &'static str = "(?P<domaine2>(?P<lettre_chiffre5>[A-Za-z0-9]|[.]){5,200})";
+    const PORT: &'static str = "(?P<port>[0-9]{1,5})";
     const MESSAGE: &'static str = "(?P<message>[\\x20-\\xFF]{1,200})";
     const MESSAGE_INTERNE: &'static str = "(?P<message_interne>[\\x20-\\xFF]{1,500})";
     const NOM_UTILISATEUR: &'static str = "(?P<nom_utilisateur>(?P<lettre_chiffre>[A-Za-z0-9]){5,20})";
@@ -63,7 +63,7 @@ impl Protocol {
     }
 
     pub fn get_echo_map(string: &str) -> Option<HashMap<String, String>> {
-        let regex_str = format!("^ECHO{}(?P<port>{}){}(?P<ip>{}){}$", Protocol::ESP, Protocol::PORT, Protocol::ESP, Protocol::DOMAINE, Protocol::CRLF);
+        let regex_str = format!("^ECHO{}{}{}{}{}", Protocol::ESP, Protocol::PORT, Protocol::ESP, Protocol::DOMAINE, Protocol::CRLF);
         let re = match Regex::new(&regex_str) {
             Ok(re) => re,
             Err(_) => return None,
@@ -75,7 +75,7 @@ impl Protocol {
         };
 
         let mut map = HashMap::new();
-        map.insert("ip".to_owned(), captures.name("ip").unwrap().as_str().to_owned());
+        map.insert("domain".to_owned(), captures.name("domaine2").unwrap().as_str().to_owned());
         map.insert("port".to_owned(), captures.name("port").unwrap().as_str().to_owned());
 
         Some(map)
