@@ -19,11 +19,12 @@ static MULTICAST_IP: &str = "224.1.1.255";
 fn main() {
 
     //TEST
+    use base64;
     let key_base64 = "DHADoCxPItcFyKwxcTEuGg5neBd2K+VLXWc6zCnsBq4=";
     let message = "Hello, world!".to_string();
     let ciphertext = AesEncryptor::encrypt(key_base64, message);
-    let ciphertext_to_string = String::from_utf8_lossy(&ciphertext);
-    println!("Ciphertext : {:?}", ciphertext_to_string);
+    let ciphertext_base64 = base64::encode(&ciphertext);
+    println!("Ciphertext (Base64): {}", ciphertext_base64);
 
     match AesEncryptor::decrypt(key_base64, &ciphertext) {
         Ok(msg) => println!("Decrypted message: {}", msg),

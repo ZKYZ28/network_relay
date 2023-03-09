@@ -25,7 +25,7 @@ impl AesEncryptor {
         result
     }
 
-
+/*
     pub fn decrypt(key_base64: &str, ciphertext: &[u8]) -> Result<String, String> {
 
         // Decode the Base64-encoded key into a byte array.
@@ -53,7 +53,7 @@ impl AesEncryptor {
             // If decryption is successful, convert the decrypted bytes into a UTF-8 string.
             Ok(bytes) => match String::from_utf8(bytes) {
                 // If the string is valid UTF-8, return it.
-                Ok(s) => Ok(s),
+                Ok(s) => Ok(format!("Success: {}", s)),
                 // If the string is not valid UTF-8, return an error message.
                 Err(_) => Err("Decryption error: Invalid UTF-8 string".to_owned()),
             },
@@ -61,4 +61,35 @@ impl AesEncryptor {
             Err(_) => Err("Decryption error: Incorrect key or message has been tampered with".to_owned()),
         }
     }
+
+     */
+
+    pub fn decrypt(key_base64: &str, ciphertext: &[u8]) -> Result<String, String> {
+
+
+        let key_decoded = general_purpose::STANDARD.decode(key_base64).unwrap();
+        println!("key_decoded : {:?}", key_decoded);
+
+        let mut key = [0u8; 32];
+        key.copy_from_slice(&key_decoded[..32]);
+        println!("key.copy_from_slice : {:?}", key);
+
+        let cipher = Aes256Gcm::new(GenericArray::from_slice(&key));
+
+        let iv = GenericArray::from_slice(&ciphertext[..12]);
+        println!("iv : {:?}", iv);
+
+        let ciphertext = &ciphertext[12..];
+        println!("ciphertext : {:?}", ciphertext);
+
+        match cipher.decrypt(iv, &*ciphertext) { // dereference ciphertext with *
+            Ok(bytes) => match String::from_utf8(bytes) {
+                Ok(s) => Ok(format!("Success: {}", s)),
+                Err(_) => Err("Decryption error: Invalid UTF-8 string".to_owned()),
+            },
+            Err(_) => Err("Decryption error: Incorrect key or message has been tampered with".to_owned()),
+        }
+    }
+
+
 }
