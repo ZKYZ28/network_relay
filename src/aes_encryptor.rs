@@ -4,6 +4,7 @@ use aes_gcm::aead::rand_core::RngCore;
 use base64::{Engine};
 use base64::engine::general_purpose;
 
+
 pub struct AesEncryptor;
 
 impl AesEncryptor {
@@ -43,10 +44,12 @@ impl AesEncryptor {
         // Extract the first 12 bytes of the concatenated ciphertext array as the IV and the remaining bytes as the ciphertext.
         let iv = GenericArray::from_slice(&ciphertext[..12]);
         println!("{:?}", iv);
-        let ciphertext = &ciphertext[12..];
+        let ciphertext = &ciphertext[0..];
+
+        println!("{:?}", ciphertext);
 
         // Decrypt the ciphertext using the AES-256-GCM cipher and the IV.
-        match cipher.decrypt(iv, &*ciphertext) { // dereference ciphertext with *
+        match cipher.decrypt(iv, ciphertext) { // dereference ciphertext with *
             // If decryption is successful, convert the decrypted bytes into a UTF-8 string.
             Ok(bytes) => match String::from_utf8(bytes) {
                 // If the string is valid UTF-8, return it.
