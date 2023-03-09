@@ -8,6 +8,7 @@ use std::net::{TcpStream, UdpSocket, IpAddr, Ipv4Addr, SocketAddr};
 use std::str::FromStr;
 use std::sync::{Arc, Mutex};
 use std::thread;
+use crate::aes_encryptor::AesEncryptor;
 use crate::protocol::Protocol;
 use crate::server_runnable::ServerRunnable;
 
@@ -16,6 +17,20 @@ static PORT: u16 = 23106;
 static MULTICAST_IP: &str = "224.1.1.255";
 
 fn main() {
+
+    //TEST
+    let key_base64 = "DHADoCxPItcFyKwxcTEuGg5neBd2K+VLXWc6zCnsBq4=";
+    let message = "Hello, world!".to_string();
+    let ciphertext = AesEncryptor::encrypt(key_base64, message);
+    let ciphertext_to_string = String::from_utf8_lossy(&ciphertext);
+    println!("Ciphertext : {:?}", ciphertext_to_string);
+
+    match AesEncryptor::decrypt(key_base64, &ciphertext) {
+        Ok(msg) => println!("Decrypted message: {}", msg),
+        Err(e) => println!("Error: {}", e),
+    }
+    //FIN TEST
+
 
     //Création des map
     let server_map: Arc<Mutex<HashMap<String, TcpStream>>> = Arc::new(Mutex::new(HashMap::new()));
