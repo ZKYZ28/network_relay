@@ -66,11 +66,11 @@ impl ServerRunnable {
 
         if let Some(lock_guard) = self.servers_map.try_lock().ok() {
             if lock_guard.contains_key(&dest_domain) {
+                drop(lock_guard); // Release the lock
                 self.send_message(&dest_domain, msg);
             } else {
                 println!("Message perdu car le serveur {} n'était pas en ligne ou n'existe pas.", dest_domain);
             }
-            drop(lock_guard); // Release the lock
         } else {
             println!("Failed to acquire lock on servers_map.");
         }
