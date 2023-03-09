@@ -24,33 +24,34 @@ impl ServerRunnable {
     }
 
 
+
     pub(crate) fn handle_client(&self) {
         let binding = self.servers_map.clone();
         let binding = binding.lock().unwrap();
         let stream = binding.get(&self.domain);
 
         if let Some(stream) = stream {
-            let mut reader = BufReader::new(stream);    //Création de l'input stream du socket pour écouté les messages entrants
+            let mut reader = BufReader::new(stream);
 
             loop {
-                let mut buffer = String::new();                       //Déclaration/Initialisation de la variable repésentant la ligne entrante
-                match reader.read_line(&mut buffer) {                   //Lecture du premier message reçu
-                    Ok(0) => break,     // Buffer vide
-                    Ok(_) => {          // Pas de problème
+                let mut buffer = String::new();
+                match reader.read_line(&mut buffer) {
+                    Ok(0) => break,
+                    Ok(_) => {
+                        match base64::decode(&buffer.trim_end()) {
+                            Ok(bytes) => {
+                                let decrypted_message = AesEncryptor::decrypt(&self.aes_key, &bytes);
+                                println!("Décrypté : {:?}", decrypted_message);
 
-                        println!("Ligne récu du serveur {} : {}, {}", self.domain, buffer, buffer.trim_end().len());
-                        println!("Ligne AsByte {} : {:?}", self.domain, &base64::decode(&buffer.trim_end()).unwrap());
-
-
-
-
-                        use base64;
-                        let decrypted_message = AesEncryptor::decrypt(&self.aes_key, &base64::decode(&buffer.trim_end()).unwrap()); //TODO decrypt() ne marche pas
-                        println!("Décrypté : {:?}", decrypted_message);
-
-                        //self::analyse_message(decrypted_message)
-                    }
-                    Err(_) => {         // Erreur de lecture
+                                Self::analyse_message(&self, decrypted_message)
+                            },
+                            Err(e) => {
+                                println!("Erreur de décodage Base64 : {:?}", e);
+                                continue;
+                            }
+                        }
+                    },
+                    Err(_) => {
                         println!("Erreur de lecture");
                         break;
                     }
@@ -62,9 +63,35 @@ impl ServerRunnable {
     }
 
 
-    fn analyse_message(msg: Result<String, String>) {
-        //let send_map = Protocol::get_send_map(&msg.unwrap());
+
+
+    fn analyse_message(&self, msg: Result<String, String>) {
+        // Vérifier si le message contient une erreur
+        let msg = match msg {
+            Ok(value) => value,
+            Err(error) => {
+                println!("Erreur lors de l'analyse du message : {}", error);
+                return;
+            }
+        };
+        println!("{}", msg);
+        // Décomposer le message
+        let groupes = match Protocol::decomposer(&msg, "send") {
+            Ok(value) => value,
+            Err(error) => {
+                println!("Erreur lors de la décomposition du message : {}", error);
+                return;
+            }
+        };
+
+        // Déterminer le serveur destinataire
+        let server_destinataire = &groupes[8];
+        println!("{}", server_destinataire);
+        // Envoyer le message
+      //  println!("SERVEUR DESTINATAIRE CONNECTE");
+        Self::send_message(&self, server_destinataire, msg);
     }
+
 
 
     /**

@@ -19,22 +19,41 @@ static MULTICAST_IP: &str = "224.1.1.255";
 fn main() {
 
     //TEST
-    use base64;
-    let key_base64 = "DHADoCxPItcFyKwxcTEuGg5neBd2K+VLXWc6zCnsBq4=";
-    let message = "SEND 2@g6server1.godswila.guru antho@g6server1.godswila.guru femme@femme FOLLOW femme@femme".to_string();
-    let ciphertext = AesEncryptor::encrypt(key_base64, message);
-    let ciphertext_base64 = base64::encode(&ciphertext);
+    // use base64;
+    // let key_base64 = "DHADoCxPItcFyKwxcTEuGg5neBd2K+VLXWc6zCnsBq4=";
+    // let message = "SEND 2@g6server1.godswila.guru antho@g6server1.godswila.guru femme@femme FOLLOW femme@femme".to_string();
+    // let ciphertext = AesEncryptor::encrypt(key_base64, message);
+    // let ciphertext_base64 = base64::encode(&ciphertext);
+
+    let message_send = "SEND 1@g6server1.godswila.guru monsieurDeVleeg@g6server1.godswila.guru edwinyotkab@g6server2.godswila.guru MSGS edwinyotkab@g6server2.godswila.guru\r\n";
+
+    // Décomposer le message
+    let groupes = match Protocol::decomposer(&message_send, "send") {
+        Ok(value) => value,
+        Err(error) => {
+            println!("Erreur lors de la décomposition du message : {}", error);
+            return;
+        }
+    };
+
+    // Déterminer le serveur destinataire
+    let server_destinataire = if groupes.len() < 11 {
+        println!("FOLLOW  ENVOYE");
+        &groupes[8];
+    };
 
 
 
-    println!("Ciphertext asbyte: {:?}", ciphertext);
-    println!("Ciphertext (Base64): {}, {}", ciphertext_base64, ciphertext_base64.len());
 
 
-    match AesEncryptor::decrypt(key_base64, &ciphertext) {
-        Ok(msg) => println!("Decrypted message: {}", msg),
-        Err(e) => println!("Error: {}", e),
-    }
+    // println!("Ciphertext asbyte: {:?}", ciphertext);
+    // println!("Ciphertext (Base64): {}, {}", ciphertext_base64, ciphertext_base64.len());
+    //
+    //
+    // match AesEncryptor::decrypt(key_base64, &ciphertext) {
+    //     Ok(msg) => println!("Decrypted message: {}", msg),
+    //     Err(e) => println!("Error: {}", e),
+    // }
     //FIN TEST
 
 
@@ -67,10 +86,13 @@ fn receive_multicast(server_map: Arc<Mutex<HashMap<String, TcpStream>>>, aes_map
             let port = map.get("port").unwrap();                                       //Port annoncé dans le echo
 
             println!("ECHO received from server {} on port {}.", domain, port);
-
+            println!(" VALEUR &domain : {}", &domain);
+            //TODO : vérification de la clé + serveur bien connecté
             if aes_map.contains_key(&domain) {                                                            //Vérification que le serveur partage bien une clé AES
-                let unicast_socket = TcpStream::connect(format!("{}:{}", domain, port))?;     //Création d'un socket TCP avec les infos du ECHO
-                server_map.lock().unwrap().insert(domain.clone(), unicast_socket);                     //Ajout du socket dans la map de serveur connecté
+                let unicast_socket = TcpStream::connect(format!("{}:{}", domain, port))?;
+                let mut map = server_map.lock().unwrap();
+                map.insert(domain.clone(), unicast_socket);
+               // server_map.lock().unwrap().insert(domain.clone(), unicast_socket);                     //Ajout du socket dans la map de serveur connecté
                 println!("Connection établie avec le serveur {}.", domain.clone());
 
                 let aes_key = aes_map.get(&domain).unwrap().to_string();                           //Récupération de la clé AES stockée
