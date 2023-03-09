@@ -40,8 +40,7 @@ impl Protocol {
     }
 
 
-    pub fn get_receiving_domain(msg : &str) -> Option<String> {
-
+    pub fn get_receiving_domain(msg: &str) -> Option<String> {
         let regex = Regex::new(&format!(
             "^SEND{}{}{}{}{}{}{}{}{}",
             Protocol::ESP,

@@ -2,22 +2,21 @@ use std::collections::HashMap;
 use std::io::{BufRead, BufReader, Write};
 use std::net::{TcpStream};
 use std::sync::{Arc, Mutex};
-use std::thread;
 use crate::aes_encryptor::AesEncryptor;
 use crate::protocol::Protocol;
+use base64::engine::general_purpose;
 use base64;
+use base64::Engine;
 
 pub struct ServerRunnable {
     servers_map: Arc<Mutex<HashMap<String, TcpStream>>>,
-    domain: String,
     aes_key: String,
 }
 
 impl ServerRunnable {
-    pub(crate) fn new(servers_map: Arc<Mutex<HashMap<String, TcpStream>>>, domain: String, aes_key: String) -> ServerRunnable {
+    pub(crate) fn new(servers_map: Arc<Mutex<HashMap<String, TcpStream>>>, aes_key: String) -> ServerRunnable {
         ServerRunnable {
             servers_map,
-            domain,
             aes_key,
         }
     }
@@ -30,19 +29,19 @@ impl ServerRunnable {
             match reader.read_line(&mut buffer) {
                 Ok(0) => break,
                 Ok(_) => {
-                    match base64::decode(&buffer.trim_end()) {
+                    match general_purpose::STANDARD.decode(&buffer.trim_end()) {
                         Ok(bytes) => {
                             let decrypted_message = AesEncryptor::decrypt(&self.aes_key, &bytes);
                             println!("Décrypté : {:?}", decrypted_message);
 
-                            Self::analyse_message(&self, decrypted_message)
-                        },
+                            Self::analyse_message(&self, decrypted_message.unwrap())
+                        }
                         Err(e) => {
                             println!("Erreur de décodage Base64 : {:?}", e);
                             continue;
                         }
                     }
-                },
+                }
                 Err(_) => {
                     println!("Erreur de lecture");
                     break;
@@ -50,9 +49,6 @@ impl ServerRunnable {
             }
         }
     }
-
-
-
 
 
     fn analyse_message(&self, msg: String) {
