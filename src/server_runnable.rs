@@ -37,12 +37,12 @@ impl ServerRunnable {
                 Ok(0) => break, // Connexion fermée
                 Ok(_) => {
                     // CAS : la ligne est correctement lue
-
                     let key = self.server_config_manager.get_server_config(&*self.current_server).map(|sc| sc.get_base64_key_aes()).unwrap_or("");
-                    println!("SEND reçu CHIFFRE LOULOU : {:?}", buffer.as_bytes());
+                    println!("buffer : {:?}", buffer);
+                    let test = buffer.replace("\r\n", "");
+                    println!("buf asbyte : {:?}", test.as_bytes());
                     let decrypted_message = AesEncryptor::decrypt(key, buffer.as_bytes());
-                    println!("SEND reçu : {:?}", decrypted_message);
-
+                    println!("buf decrypted : {:?}", decrypted_message);
 
                   // self::analyse_message(decrypted_message)
 
