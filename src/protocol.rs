@@ -80,4 +80,51 @@ impl Protocol {
 
         Some(map)
     }
+
+
+    //TODO
+    /*pub fn get_send_map(msg : &str) -> Option<HashMap<String, String>> {
+        let regex_str = format!(
+            "^SEND{}{}{}{}{}(({})|({})){}{}{}",
+            Protocol::ESP,
+            Protocol::ID_DOMAINE,
+            Protocol::ESP,
+            Protocol::NOM_DOMAINE,
+            Protocol::ESP,
+            Protocol::NOM_DOMAINE,
+            Protocol::TAG_DOMAINE,
+            Protocol::ESP,
+            Protocol::MESSAGE_INTERNE,
+            Protocol::CRLF
+        );
+        let re = match Regex::new(&regex_str) {
+            Ok(re) => re,
+            Err(_) => return None,
+        };
+        let captures = match re.captures(string) {
+            Some(captures) => captures,
+            None => return None,
+        };
+        let mut map = HashMap::new();
+        map.insert(
+            "id_domaine".to_owned(),
+            captures["id_domaine"].to_owned(),
+        );
+        map.insert(
+            "nom_domaine".to_owned(),
+            captures["nom_domaine"].to_owned(),
+        );
+        map.insert("message".to_owned(), captures["message_interne"].to_owned());
+        if let Some(tag) = captures.name("tag_domaine") {
+            let tag_str = tag.as_str();
+            let tag_re = Regex::new(Protocol::TAG_DOMAINE).unwrap();
+            let tag_captures = tag_re.captures(tag_str).unwrap();
+            map.insert("tag".to_owned(), tag_captures["tag"].to_owned());
+            map.insert(
+                "domaine_tag".to_owned(),
+                tag_captures["domaine_tag"].to_owned(),
+            );
+        }
+        Some(map)
+    }*/
 }

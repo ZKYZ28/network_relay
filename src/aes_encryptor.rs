@@ -1,7 +1,7 @@
 use aes_gcm::{Aes256Gcm, KeyInit};
 use aes_gcm::aead::{Aead, generic_array::{GenericArray}};
 use aes_gcm::aead::rand_core::RngCore;
-use base64::{decode, encode, Engine};
+use base64::{Engine};
 use base64::engine::general_purpose;
 
 pub struct AesEncryptor;
@@ -40,9 +40,9 @@ impl AesEncryptor {
         let cipher = Aes256Gcm::new(GenericArray::from_slice(&key));
 
         // Extract the first 12 bytes of the ciphertext and convert them into a generic array.
+        // Extract the first 12 bytes of the concatenated ciphertext array as the IV and the remaining bytes as the ciphertext.
         let iv = GenericArray::from_slice(&ciphertext[..12]);
-
-        // Extract the remaining bytes of the ciphertext.
+        println!("{:?}", iv);
         let ciphertext = &ciphertext[12..];
 
         // Decrypt the ciphertext using the AES-256-GCM cipher and the IV.
@@ -58,6 +58,4 @@ impl AesEncryptor {
             Err(_) => Err("Decryption error: Incorrect key or message has been tampered with".to_owned()),
         }
     }
-
-
 }
