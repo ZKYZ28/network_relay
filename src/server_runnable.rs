@@ -14,11 +14,7 @@ pub struct ServerRunnable {
 }
 
 impl ServerRunnable {
-    pub(crate) fn new(
-        servers_map: Arc<Mutex<HashMap<String, TcpStream>>>,
-        domain: String,
-        aes_key: String,
-    ) -> ServerRunnable {
+    pub(crate) fn new(servers_map: Arc<Mutex<HashMap<String, TcpStream>>>, domain: String, aes_key: String) -> ServerRunnable {
         ServerRunnable {
             servers_map,
             domain,
@@ -26,36 +22,37 @@ impl ServerRunnable {
         }
     }
 
-    pub(crate) fn handle_client(&self) {
-        let arc = self.servers_map.clone();
-        let stream = {
-            let binding = arc.try_lock().unwrap();
-            binding.get(&self.domain).map(|tcp_stream| tcp_stream.try_clone().unwrap())
-        };
 
-        if let Some(stream) = stream {
-            let mut reader = BufReader::new(stream);
-            loop {
-                let mut buffer = String::new();
+    pub(crate) fn handle_client(&self, stream: &TcpStream) {
+        let mut reader = BufReader::new(stream);
+        loop {
+            let mut buffer = String::new();
+            match reader.read_line(&mut buffer) {
+                Ok(0) => break,
+                Ok(_) => {
+                    match base64::decode(&buffer.trim_end()) {
+                        Ok(bytes) => {
+                            let decrypted_message = AesEncryptor::decrypt(&self.aes_key, &bytes);
+                            println!("Décrypté : {:?}", decrypted_message);
 
-                match reader.read_line(&mut buffer) {
-                    Ok(0) => break,
-                    Ok(_) => {
-                        let decrypted_message = AesEncryptor::decrypt(&self.aes_key, &base64::decode(&buffer.trim_end()).unwrap()).unwrap();
-                        println!("Décrypté : {:?}", decrypted_message);
-
-                        self.analyse_message(decrypted_message)
+                            Self::analyse_message(&self, decrypted_message)
+                        },
+                        Err(e) => {
+                            println!("Erreur de décodage Base64 : {:?}", e);
+                            continue;
+                        }
                     }
-                    Err(_) => {
-                        println!("Erreur de lecture");
-                        break;
-                    }
+                },
+                Err(_) => {
+                    println!("Erreur de lecture");
+                    break;
                 }
             }
-        } else {
-            println!("Socket introuvable pour le nom de domaine {}", self.domain);
         }
     }
+
+
+
 
 
     fn analyse_message(&self, msg: String) {
@@ -74,19 +71,11 @@ impl ServerRunnable {
     }
 
     /**
-     * Méthode qui sert à envoyé un message à un des serveurs connecté.
+     * Méthode qui sert à envoyer un message à un des serveurs connecté.
      */
     fn send_message(&self, domain: &str, msg: String) {
-        let encrypted_msg = AesEncryptor::encrypt(&self.aes_key, msg);
-        let mut tcp_socket = match self.servers_map.try_lock() {
-            Ok(lock_guard) => lock_guard.get(domain).unwrap().try_clone().unwrap(),
-            Err(_) => {
-                println!("Failed to acquire lock on servers_map.");
-                return;
-            }
-        };
-        tcp_socket.write_all(&encrypted_msg).unwrap();
-        println!("Message transféré au serveur {}.", domain);
-        drop(tcp_socket); // Release the lock
+        let encrypted_msg = AesEncryptor::encrypt(&self.aes_key, msg) + "\n";                          //Encryption du message
+        let mut tcp_socket = self.servers_map.lock().unwrap().get(domain).unwrap().try_clone().unwrap();     //Récupération du socket du serveur destinataire
+        tcp_socket.write_all(&encrypted_msg.as_bytes()).unwrap();                                                               //Envoi
     }
 }
