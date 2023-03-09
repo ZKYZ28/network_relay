@@ -24,41 +24,31 @@ impl ServerRunnable {
     }
 
 
+    pub(crate) fn handle_client(&self, stream: &TcpStream) {
+        let mut reader = BufReader::new(stream);
+        loop {
+            let mut buffer = String::new();
+            match reader.read_line(&mut buffer) {
+                Ok(0) => break,
+                Ok(_) => {
+                    match base64::decode(&buffer.trim_end()) {
+                        Ok(bytes) => {
+                            let decrypted_message = AesEncryptor::decrypt(&self.aes_key, &bytes);
+                            println!("Décrypté : {:?}", decrypted_message);
 
-    pub(crate) fn handle_client(&self) {
-        let binding = self.servers_map.clone();
-        let binding = binding.lock().unwrap();
-        let stream = binding.get(&self.domain);
-
-        if let Some(stream) = stream {
-            let mut reader = BufReader::new(stream);
-
-            loop {
-                let mut buffer = String::new();
-                match reader.read_line(&mut buffer) {
-                    Ok(0) => break,
-                    Ok(_) => {
-                        match base64::decode(&buffer.trim_end()) {
-                            Ok(bytes) => {
-                                let decrypted_message = AesEncryptor::decrypt(&self.aes_key, &bytes);
-                                println!("Décrypté : {:?}", decrypted_message);
-
-                                Self::analyse_message(&self, decrypted_message)
-                            },
-                            Err(e) => {
-                                println!("Erreur de décodage Base64 : {:?}", e);
-                                continue;
-                            }
+                            Self::analyse_message(&self, decrypted_message)
+                        },
+                        Err(e) => {
+                            println!("Erreur de décodage Base64 : {:?}", e);
+                            continue;
                         }
-                    },
-                    Err(_) => {
-                        println!("Erreur de lecture");
-                        break;
                     }
+                },
+                Err(_) => {
+                    println!("Erreur de lecture");
+                    break;
                 }
             }
-        } else {
-            println!("Socket introuvable pour le nom de domaine {}", self.domain);
         }
     }
 
@@ -95,7 +85,7 @@ impl ServerRunnable {
 
 
     /**
-     * Méthode qui sert à envoyé un message à un des serveurs connecté.
+     * Méthode qui sert à envoyer un message à un des serveurs connecté.
      */
     fn send_message(&self, domain: &str, msg: String) {
         let encrypted_msg = AesEncryptor::encrypt(&self.aes_key, msg);                          //Encryption du message

@@ -43,9 +43,6 @@ fn main() {
     };
 
 
-
-
-
     // println!("Ciphertext asbyte: {:?}", ciphertext);
     // println!("Ciphertext (Base64): {}, {}", ciphertext_base64, ciphertext_base64.len());
     //
@@ -70,7 +67,6 @@ fn main() {
  * Méthode qui écoute en boucle pour les echo et qui ajoute dans servermap quand une connection est éffectuée
  */
 fn receive_multicast(server_map: Arc<Mutex<HashMap<String, TcpStream>>>, aes_map: HashMap<String, String>) -> Result<(), std::io::Error> {
-
     let socket = UdpSocket::bind(SocketAddr::new(IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)), PORT))?;    //Création d'un socket UDP et le lie à toutes les interfaces locales en écoutant le port spécifié
     socket.join_multicast_v4(&Ipv4Addr::from_str(MULTICAST_IP).unwrap(), &Ipv4Addr::new(0, 0, 0, 0))?;  //Permet de joindre un groupe de diffusion multicast IPv4 en utilisant l'adresse IP multicast spécifiée (stockée dans la variable MULTICAST_IP) et en écoutant sur toutes les interfaces locales.
 
@@ -91,8 +87,8 @@ fn receive_multicast(server_map: Arc<Mutex<HashMap<String, TcpStream>>>, aes_map
             if aes_map.contains_key(&domain) {                                                            //Vérification que le serveur partage bien une clé AES
                 let unicast_socket = TcpStream::connect(format!("{}:{}", domain, port))?;
                 let mut map = server_map.lock().unwrap();
-                map.insert(domain.clone(), unicast_socket);
-               // server_map.lock().unwrap().insert(domain.clone(), unicast_socket);                     //Ajout du socket dans la map de serveur connecté
+                map.insert(domain.clone(), unicast_socket.try_clone().expect("Problème lors du clonage du unicast socket"));
+                // server_map.lock().unwrap().insert(domain.clone(), unicast_socket);                     //Ajout du socket dans la map de serveur connecté
                 println!("Connection établie avec le serveur {}.", domain.clone());
 
                 let aes_key = aes_map.get(&domain).unwrap().to_string();                           //Récupération de la clé AES stockée
@@ -100,7 +96,7 @@ fn receive_multicast(server_map: Arc<Mutex<HashMap<String, TcpStream>>>, aes_map
                 let server_map_clone = server_map.clone();                            //Lancement du thread serveur
                 thread::spawn(move || {
                     let server_runnable = ServerRunnable::new(server_map_clone, domain.to_string(), aes_key);
-                    server_runnable.handle_client();
+                    server_runnable.handle_client(&unicast_socket);
                 });
             } else {
                 println!("ECHO ignoré car le server {} ne partage pas de clé avec ce relay.", domain)
