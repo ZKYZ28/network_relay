@@ -88,8 +88,8 @@ impl ServerRunnable {
      * Méthode qui sert à envoyer un message à un des serveurs connecté.
      */
     fn send_message(&self, domain: &str, msg: String) {
-        let encrypted_msg = AesEncryptor::encrypt(&self.aes_key, msg);                          //Encryption du message
+        let encrypted_msg = AesEncryptor::encrypt(&self.aes_key, msg) + "\n";                          //Encryption du message
         let mut tcp_socket = self.servers_map.lock().unwrap().get(domain).unwrap().try_clone().unwrap();     //Récupération du socket du serveur destinataire
-        tcp_socket.write_all(&encrypted_msg).unwrap();                                                               //Envoi
+        tcp_socket.write_all(&encrypted_msg.as_bytes()).unwrap();                                                               //Envoi
     }
 }

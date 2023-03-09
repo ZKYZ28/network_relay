@@ -1,6 +1,7 @@
 use aes_gcm::{Aes256Gcm, KeyInit};
 use aes_gcm::aead::{Aead, generic_array::{GenericArray}};
 use aes_gcm::aead::rand_core::RngCore;
+use base64;
 use base64::{Engine};
 use base64::engine::general_purpose;
 
@@ -8,7 +9,7 @@ use base64::engine::general_purpose;
 pub struct AesEncryptor;
 
 impl AesEncryptor {
-    pub fn encrypt(key_base64: &str, message: String) -> Vec<u8> {
+    pub fn encrypt(key_base64: &str, message: String) -> String {
         let key_decoded = general_purpose::STANDARD.decode(key_base64).unwrap();
         let mut key = [0u8; 32];
         key.copy_from_slice(&key_decoded[..32]);
@@ -22,7 +23,7 @@ impl AesEncryptor {
         let mut result = Vec::new();
         result.extend_from_slice(&iv);
         result.extend_from_slice(&ciphertext);
-        result
+        general_purpose::STANDARD.encode(&result)
     }
 
 /*
