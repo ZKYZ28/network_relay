@@ -1,10 +1,10 @@
-use std::collections::HashMap;
-use std::io::{BufRead, BufReader, Write};
-use std::net::{TcpStream};
-use std::sync::{Arc, Mutex};
-use std::thread;
 use crate::aes_encryptor::AesEncryptor;
 use crate::protocol::Protocol;
+use std::collections::HashMap;
+use std::io::{BufRead, BufReader, Write};
+use std::net::TcpStream;
+use std::sync::{Arc, Mutex};
+use std::thread;
 
 pub struct ServerRunnable {
     handle: Option<thread::JoinHandle<()>>,
@@ -14,7 +14,11 @@ pub struct ServerRunnable {
 }
 
 impl ServerRunnable {
-    pub(crate) fn new(servers_map: Arc<Mutex<HashMap<String, TcpStream>>>, domain: String, aes_key: String) -> ServerRunnable {
+    pub(crate) fn new(
+        servers_map: Arc<Mutex<HashMap<String, TcpStream>>>,
+        domain: String,
+        aes_key: String,
+    ) -> ServerRunnable {
         ServerRunnable {
             handle: None,
             servers_map,
@@ -23,28 +27,34 @@ impl ServerRunnable {
         }
     }
 
-
     pub(crate) fn handle_client(&self) {
         let binding = self.servers_map.clone();
         let binding = binding.lock().unwrap();
         let stream = binding.get(&self.domain);
 
         if let Some(stream) = stream {
-            let mut reader = BufReader::new(stream);    //Création de l'input stream du socket pour écouté les messages entrants
+            let mut reader = BufReader::new(stream); //Création de l'input stream du socket pour écouté les messages entrants
 
             loop {
-                let mut buffer = String::new();                       //Déclaration/Initialisation de la variable repésentant la ligne entrante
-                match reader.read_line(&mut buffer) {                   //Lecture du premier message reçu
-                    Ok(0) => break,     // Buffer vide
-                    Ok(_) => {          // Pas de problème
+                let mut buffer = String::new(); //Déclaration/Initialisation de la variable repésentant la ligne entrante
+                match reader.read_line(&mut buffer) {
+                    //Lecture du premier message reçu
+                    Ok(0) => break, // Buffer vide
+                    Ok(_) => {
+                        // Pas de problème
 
-                        println!("Ligne récu du serveur {:?} : {:?}", self.domain, buffer.trim_end());
-                        let decrypted_message = AesEncryptor::decrypt(&self.aes_key, buffer.trim_end().as_bytes()); //TODO decrypt() ne marche pas
+                        println!(
+                            "Ligne récu du serveur {:?} : {:?}",
+                            self.domain,
+                            buffer.trim_end()
+                        );
+                        let decrypted_message = AesEncryptor::decrypt(buffer.trim_end().as_bytes(), &self.aes_key); //TODO decrypt() ne marche pas
                         println!("Décrypté : {:?}", decrypted_message);
 
                         //self::analyse_message(decrypted_message)
                     }
-                    Err(_) => {         // Erreur de lecture
+                    Err(_) => {
+                        // Erreur de lecture
                         println!("Erreur de lecture");
                         break;
                     }
@@ -55,18 +65,23 @@ impl ServerRunnable {
         }
     }
 
-
     fn analyse_message(msg: Result<String, String>) {
         //let send_map = Protocol::get_send_map(&msg.unwrap());
     }
-
 
     /**
      * Méthode qui sert à envoyé un message à un des serveurs connecté.
      */
     fn send_message(&self, domain: &str, msg: String) {
-        let encrypted_msg = AesEncryptor::encrypt(&self.aes_key, msg);                          //Encryption du message
-        let mut tcp_socket = self.servers_map.lock().unwrap().get(domain).unwrap().try_clone().unwrap();     //Récupération du socket du serveur destinataire
-        tcp_socket.write_all(&encrypted_msg).unwrap();                                                               //Envoi
+        let encrypted_msg = AesEncryptor::encrypt(&self.aes_key, msg); //Encryption du message
+        let mut tcp_socket = self
+            .servers_map
+            .lock()
+            .unwrap()
+            .get(domain)
+            .unwrap()
+            .try_clone()
+            .unwrap(); //Récupération du socket du serveur destinataire
+        tcp_socket.write_all(&encrypted_msg).unwrap(); //Envoi
     }
 }

@@ -18,21 +18,6 @@ static MULTICAST_IP: &str = "224.1.1.255";
 
 fn main() {
 
-    //TEST
-    use base64;
-    let key_base64 = "DHADoCxPItcFyKwxcTEuGg5neBd2K+VLXWc6zCnsBq4=";
-    let message = "Hello, world!".to_string();
-    let ciphertext = AesEncryptor::encrypt(key_base64, message);
-    let ciphertext_base64 = base64::encode(&ciphertext);
-    println!("Ciphertext (Base64): {}", ciphertext_base64);
-
-    match AesEncryptor::decrypt(key_base64, &ciphertext) {
-        Ok(msg) => println!("Decrypted message: {}", msg),
-        Err(e) => println!("Error: {}", e),
-    }
-    //FIN TEST
-
-
     //Création des map
     let server_map: Arc<Mutex<HashMap<String, TcpStream>>> = Arc::new(Mutex::new(HashMap::new()));
     let server_aes_map = config_reader::read_config("src/ressources/relayConfig.json").unwrap();
