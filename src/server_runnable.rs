@@ -4,6 +4,8 @@ use std::collections::HashMap;
 use std::io::{BufRead, BufReader, Write};
 use std::net::{TcpStream};
 use std::sync::{Arc, Mutex};
+use std::thread;
+use std::thread::Thread;
 use base64::engine::general_purpose;
 use base64;
 use base64::Engine;
@@ -30,7 +32,7 @@ impl ServerRunnable {
     /// La méthode handle_client est utilisée pour gérer la communication entre un client TCP et un serveur.
     /// Elle prend en entrée un flux TCP stream et utilise un BufReader pour lire les données entrantes.
     ///
-    pub(crate) fn handle_client(&self, stream: &TcpStream) {
+    pub(crate) fn handle_client(&self, stream: &TcpStream, domain:&str) {
         let mut reader = BufReader::new(stream);                                                                  // Création d'un BufReader pour lire les donnée reçue depuis le stream TCP
         loop {
             let mut message = String::new();
@@ -52,7 +54,9 @@ impl ServerRunnable {
                     }
                 }
                 Err(_) => {
-                    println!("Une erreur est survenue lors de la lecture d'un message.");
+                    let stream = self.servers_map.try_lock().unwrap().remove(domain).unwrap();
+                    stream.shutdown(std::net::Shutdown::Both).expect("Could not shutdown stream");
+                    println!("Serveur {} déconnecté...", domain);
                     break;
                 }
             }
