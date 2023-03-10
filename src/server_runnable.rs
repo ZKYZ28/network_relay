@@ -4,8 +4,6 @@ use std::collections::HashMap;
 use std::io::{BufRead, BufReader, Write};
 use std::net::{TcpStream};
 use std::sync::{Arc, Mutex};
-use std::thread;
-use std::thread::Thread;
 use base64::engine::general_purpose;
 use base64;
 use base64::Engine;
@@ -13,6 +11,7 @@ use base64::Engine;
 pub struct ServerRunnable {
     servers_map: Arc<Mutex<HashMap<String, TcpStream>>>,
     aes_key: String,
+    is_connected: bool
 }
 
 impl ServerRunnable {
@@ -25,6 +24,7 @@ impl ServerRunnable {
         ServerRunnable {
             servers_map,
             aes_key,
+            is_connected: true
         }
     }
 
@@ -32,9 +32,9 @@ impl ServerRunnable {
     /// La méthode handle_client est utilisée pour gérer la communication entre un client TCP et un serveur.
     /// Elle prend en entrée un flux TCP stream et utilise un BufReader pour lire les données entrantes.
     ///
-    pub(crate) fn handle_client(&self, stream: &TcpStream, domain:&str) {
+    pub(crate) fn handle_client(&mut self, stream: &TcpStream, domain:&str) {
         let mut reader = BufReader::new(stream);                                                                  // Création d'un BufReader pour lire les donnée reçue depuis le stream TCP
-        loop {
+        while self.is_connected {
             let mut message = String::new();
             match reader.read_line(&mut message) {                                                                                     // Lecture des données du flux et les stock dans la variable message. La méthode read_line est bloquante
                 Ok(0) => break,
@@ -54,6 +54,7 @@ impl ServerRunnable {
                     }
                 }
                 Err(_) => {
+                    self.is_connected = false;
                     let stream = self.servers_map.try_lock().unwrap().remove(domain).unwrap();
                     stream.shutdown(std::net::Shutdown::Both).expect("Could not shutdown stream");
                     println!("Serveur {} déconnecté...", domain);
@@ -61,6 +62,7 @@ impl ServerRunnable {
                 }
             }
         }
+        println!("Le thread du serveur {} a été tué...", domain);
     }
 
 
