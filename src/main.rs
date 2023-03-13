@@ -63,11 +63,15 @@ fn receive_multicast(server_map: Arc<Mutex<HashMap<String, TcpStream>>>, aes_map
 
                 let aes_key = aes_map.get(&domain).unwrap().to_string();                                                              // Récupération de la clé AES stockée
 
-                let server_map_clone = server_map.clone();                                                               // Sans l'utilisation du mot clé move, ces variables ne seraient pas disponibles dans le nouveau thread, car Rust garantit que chaque variable ne peut avoir qu'un propriétaire à la fois. En utilisant le mot clé move, Rust transfère la propriété de server_map_clone et aes_key à la closure du thread, permettant ainsi leur utilisation dans ce nouveau contexte.
-                thread::spawn(move || {
-                    let server_runnable = ServerRunnable::new(server_map_clone, aes_key);
-                    server_runnable.handle_client(&unicast_socket, &domain);
-                });
+                if aes_key.len() == 44{                                                                                                             //Vérification de la validité de la clé
+                    let server_map_clone = server_map.clone();                                                               // Sans l'utilisation du mot clé move, ces variables ne seraient pas disponibles dans le nouveau thread, car Rust garantit que chaque variable ne peut avoir qu'un propriétaire à la fois. En utilisant le mot clé move, Rust transfère la propriété de server_map_clone et aes_key à la closure du thread, permettant ainsi leur utilisation dans ce nouveau contexte.
+                    thread::spawn(move || {
+                        let server_runnable = ServerRunnable::new(server_map_clone, aes_key);
+                        server_runnable.handle_client(&unicast_socket, &domain);
+                    });
+                }else{
+                    println!("ERREUR la clé AES n'est pas valide")
+                }
             } else {
                 println!("ECHO ignoré car le server {} ne partage pas de clé avec ce relay.", domain)
             }
