@@ -38,7 +38,7 @@ fn main() {
 fn receive_multicast(server_map: Arc<Mutex<HashMap<String, TcpStream>>>, aes_map: HashMap<String, String>) -> Result<(), std::io::Error> {
 
     let socket = UdpSocket::bind(SocketAddr::new(IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)), PORT))?;            // Création d'un socket UDP et le lie à toutes les interfaces locales en écoutant le port spécifié
-    socket.join_multicast_v4(&Ipv4Addr::from_str(MULTICAST_IP).unwrap(), &Ipv4Addr::new(0, 0, 0, 0))?;          // Permet de joindre un groupe de diffusion multicast IPv4 en utilisant l'adresse IP multicast spécifiée (stockée dans la variable MULTICAST_IP) et en écoutant sur toutes les interfaces locales.
+    socket.join_multicast_v4(&Ipv4Addr::from_str(MULTICAST_IP).unwrap(), &Ipv4Addr::UNSPECIFIED)?;          // Permet de joindre un groupe de diffusion multicast IPv4 en utilisant l'adresse IP multicast spécifiée (stockée dans la variable MULTICAST_IP) et en écoutant sur toutes les interfaces locales.
 
     loop {
         let mut buf = [0u8; 1024];                                                                                                    // Crée un tableau mutable de 1024 éléments de type u8 (Entier non signé de 8 bits), initialisés à zéro, pour stocker des données qui seront lues à partir d'un socket.
