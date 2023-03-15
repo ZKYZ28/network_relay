@@ -79,7 +79,7 @@ impl ServerRunnable {
                 drop(lock_guard);                                                                                      // Retrait du verrou pour libérer la map
                 self.send_message(&dest_domain, msg);                                                                      // Envoi du message au Stream TCP du serveur connecté
             } else {
-                println!("Message perdu car le serveur {} n'était pas en ligne ou n'existe pas.", dest_domain);
+                println!("Message perdu car le serveur {} n'existe pas, ou n'est pas en ligne.", dest_domain);
             }
         } else {
             println!("Impossible de transférer le message car la serveur_map est en deadlock.");
