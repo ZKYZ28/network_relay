@@ -21,11 +21,11 @@ static JSON_PATH : &str = "src/ressources/relayConfig.json";
 fn main() {
 
     let server_map: Arc<Mutex<HashMap<String, TcpStream>>> = Arc::new(Mutex::new(HashMap::new()));
-    let server_aes_map = config_reader::read_config(JSON_PATH).unwrap();
+    let server_aes: Arc<Mutex<HashMap<String, String>>> = Arc::new(Mutex::new(config_reader::read_config(JSON_PATH).unwrap()));
 
 
     println!("-----Démarrage de l'écoute multicast sur l'IP {} et le port {}", PORT, MULTICAST_IP);
-    receive_multicast(server_map.clone(), server_aes_map).expect("Une erreur est survenue lors de l'écoute en multicast.");
+    receive_multicast(server_map.clone(), server_aes).expect("Une erreur est survenue lors de l'écoute en multicast.");
 }
 
 
@@ -35,10 +35,10 @@ fn main() {
 /// Sinon, une connexion TCP sera créée sur ce serveur à l'aide des informations annoncées, et un nouveau thread sera créé pour la réception et l'envoi de messages vers ou depuis ce serveur en TCP.
 /// Cette méthode doit être appelée une seule fois au lancement du programme et fonctionne même si d'autres threads ont été créés auparavant.
 ///
-fn receive_multicast(server_map: Arc<Mutex<HashMap<String, TcpStream>>>, aes_map: HashMap<String, String>) -> Result<(), std::io::Error> {
+fn receive_multicast(server_map: Arc<Mutex<HashMap<String, TcpStream>>>, aes_map: Arc<Mutex<HashMap<String, String>>>) -> Result<(), std::io::Error> {
 
     let socket = UdpSocket::bind(SocketAddr::new(IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)), PORT))?;            // Création d'un socket UDP et le lie à toutes les interfaces locales en écoutant le port spécifié
-    socket.join_multicast_v4(&Ipv4Addr::from_str(MULTICAST_IP).unwrap(), &Ipv4Addr::UNSPECIFIED)?;          // Permet de joindre un groupe de diffusion multicast IPv4 en utilisant l'adresse IP multicast spécifiée (stockée dans la variable MULTICAST_IP) et en écoutant sur toutes les interfaces locales.
+    socket.join_multicast_v4(&Ipv4Addr::from_str(MULTICAST_IP).unwrap(), &Ipv4Addr::UNSPECIFIED)?;                          // Permet de joindre un groupe de diffusion multicast IPv4 en utilisant l'adresse IP multicast spécifiée (stockée dans la variable MULTICAST_IP) et en écoutant sur toutes les interfaces locales.
 
     loop {
         let mut buf = [0u8; 1024];                                                                                                    // Crée un tableau mutable de 1024 éléments de type u8 (Entier non signé de 8 bits), initialisés à zéro, pour stocker des données qui seront lues à partir d'un socket.
@@ -53,20 +53,22 @@ fn receive_multicast(server_map: Arc<Mutex<HashMap<String, TcpStream>>>, aes_map
 
             println!("ECHO received from server {} on port {}.", domain, port);
 
-            if aes_map.contains_key(&domain) {                                                                                               // Vérification que le serveur partage bien une clé AES avec le serveur ennoncé
-                let unicast_socket = TcpStream::connect(format!("{}:{}", domain, port))?;                                        // Connection au ServeurSocket du serveur
+            if aes_map.try_lock().unwrap().contains_key(&domain) {                                                                         // Vérification que le serveur partage bien une clé AES avec le serveur ennoncé
+                let unicast_socket = TcpStream::connect(format!("{}:{}", domain, port))?;                                      // Connection au ServeurSocket du serveur
 
-                let mut map = server_map.lock().unwrap();                                                                // Crée un verrou sur la map grâce a lock pour garantir qu'un seul thread peut y accéder à la fois
-                map.insert(domain.clone(), unicast_socket.try_clone().expect("Problème lors du clonage du unicast socket"));         // Ajout du socket dans la map de serveur connecté
+                let mut map = server_map.lock().unwrap();                                                              // Crée un verrou sur la map grâce a lock pour garantir qu'un seul thread peut y accéder à la fois
+                map.insert(domain.clone(), unicast_socket.try_clone().expect("Problème lors du clonage du unicast socket"));       // Ajout du socket dans la map de serveur connecté
 
                 println!("Connection établie avec le serveur {} !", domain.clone());
 
-                let aes_key = aes_map.get(&domain).unwrap().to_string();                                                              // Récupération de la clé AES stockée
+                let aes_key = aes_map.try_lock().unwrap().get(&domain).unwrap().to_string();                                        // Récupération de la clé AES stockée
 
-            if aes_key.len() == 44 {                                                                                                            //Vérification de la validité de la clé
-                let server_map_clone = server_map.clone();                                                               // Sans l'utilisation du mot clé move, ces variables ne seraient pas disponibles dans le nouveau thread, car Rust garantit que chaque variable ne peut avoir qu'un propriétaire à la fois. En utilisant le mot clé move, Rust transfère la propriété de server_map_clone et aes_key à la closure du thread, permettant ainsi leur utilisation dans ce nouveau contexte.
+            if aes_key.len() == 44 {                                                                                                         //Vérification de la validité de la clé
+                let server_map_clone = server_map.clone();
+                let server_aes_clone = aes_map.clone();                                                               // Sans l'utilisation du mot clé move, ces variables ne seraient pas disponibles dans le nouveau thread, car Rust garantit que chaque variable ne peut avoir qu'un propriétaire à la fois. En utilisant le mot clé move, Rust transfère la propriété de server_map_clone et aes_key à la closure du thread, permettant ainsi leur utilisation dans ce nouveau contexte.
+                                                                                                                                            // Sans l'utilisation du mot clé move, ces variables ne seraient pas disponibles dans le nouveau thread, car Rust garantit que chaque variable ne peut avoir qu'un propriétaire à la fois. En utilisant le mot clé move, Rust transfère la propriété de server_map_clone et aes_key à la closure du thread, permettant ainsi leur utilisation dans ce nouveau contexte.
                     thread::spawn(move || {
-                        let mut server_runnable = ServerRunnable::new(server_map_clone, aes_key);
+                        let mut server_runnable = ServerRunnable::new( server_aes_clone, server_map_clone, aes_key);
                         server_runnable.handle_client(&unicast_socket, &domain);
                     });
                 } else {

@@ -10,6 +10,7 @@ use base64::Engine;
 
 pub struct ServerRunnable {
     servers_map: Arc<Mutex<HashMap<String, TcpStream>>>,
+    server_aes: Arc<Mutex<HashMap<String, String>>>,
     aes_key: String,
     is_connected: bool
 }
@@ -20,8 +21,9 @@ impl ServerRunnable {
     /// Cette fonction crée une nouvelle instance de la structure ServerRunnable en prenant en entrée une carte partagée des serveurs et une clé AES.
     /// La fonction retourne l'instance créée avec les valeurs des paramètres passés.
     ///
-    pub(crate) fn new(servers_map: Arc<Mutex<HashMap<String, TcpStream>>>, aes_key: String) -> ServerRunnable {
+    pub(crate) fn new(server_aes: Arc<Mutex<HashMap<String, String>>>, servers_map: Arc<Mutex<HashMap<String, TcpStream>>>, aes_key: String) -> ServerRunnable {
         ServerRunnable {
+            server_aes,
             servers_map,
             aes_key,
             is_connected: true
@@ -89,7 +91,7 @@ impl ServerRunnable {
     /// La méthode send_message sert à envoyé un message à un stream TCP en le cryptant avec AES256
     ///
     fn send_message(&self, domain: &str, msg: String) {
-        let encrypted_msg = AesEncryptor::encrypt(&self.aes_key, msg) + "\n";                          // Encryption du message avec AES256
+        let encrypted_msg = AesEncryptor::encrypt(&self.server_aes.lock().unwrap().get(domain).unwrap(), msg) + "\n";                          // Encryption du message avec AES256
         let mut tcp_socket = self.servers_map.lock().unwrap().get(domain).unwrap().try_clone().unwrap();          // Récupération du socket du serveur destinataire
         tcp_socket.write_all(&encrypted_msg.as_bytes()).unwrap();                                                         // Envoi
     }
