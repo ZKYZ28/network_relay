@@ -53,12 +53,12 @@ fn receive_multicast(server_map: Arc<Mutex<HashMap<String, TcpStream>>>, aes_map
 
             println!("ECHO received from server {} on port {}.", domain, port);
 
-                                                       // Récupération de la clé AES stockée
-
+            // Récupération de la clé AES stockée
             if aes_map.try_lock().unwrap().contains_key(&domain) {                                                                              // Vérification que le serveur partage bien une clé AES avec le serveur ennoncé
 
                 let aes_key = aes_map.try_lock().unwrap().get(&domain).unwrap().to_string();
-                if aes_key.len() == 44{
+
+                if aes_key.len() == 44 {
 
                     let unicast_socket = TcpStream::connect(format!("{}:{}", domain, port))?;                                      // Connection au ServeurSocket du serveur
 
